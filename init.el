@@ -189,6 +189,7 @@
             (lambda () (interactive) (org-capture nil "n")))
 (setq-default org-confirm-babel-evaluate nil
               org-image-actual-width nil
+              org-src-fontify-natively t
               org-capture-templates '(("n" "Note" entry (file "~/org/inbox.org")
                                        "* %?\nEntered on %U\n  %i\n  %a")))
 
@@ -204,6 +205,16 @@
    (java . t)
    (plantuml . t)
    (python . t)))
+
+;; Plantuml
+(use-package plantuml-mode
+  :custom
+  (plantuml-default-exec-mode 'jar)
+  (plantuml-jar-path (expand-file-name "~/bin/plantuml.jar"))
+  (org-plantuml-jar-path (expand-file-name "~/bin/plantuml.jar")))
+
+;; Export to Hugo
+(use-package ox-hugo)
 
 ;; Docker
 (use-package dockerfile-mode)
@@ -221,6 +232,14 @@
 ;; Vterm
 (use-package vterm
   :custom (vterm-install t))
+
+;; Exec path from shell
+(use-package exec-path-from-shell
+  :if (memq window-system '(mac ns))
+  :config
+  (dolist (var '("SSH_AUTH_SOCK" "SSH_AGENT_PID" "LANG"))
+    (add-to-list 'exec-path-from-shell-variables var))
+  (exec-path-from-shell-initialize))
 
 (provide 'init)
 ;;; init.el ends here
