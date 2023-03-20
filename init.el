@@ -101,11 +101,6 @@
   ;; Use company mode everywhere.
   (global-company-mode t))
 
-;; Documentation popup
-;; (use-package company-quickhelp
-;;   :init
-;;   (add-hook 'after-init-hook 'company-quickhelp-mode))
-
 (use-package company-box
   :diminish
   :hook (company-mode . company-box-mode))
@@ -125,15 +120,6 @@
   :diminish
   :init
   (add-hook 'after-init-hook 'which-key-mode))
-
-;; Moving and duplicating lines of rectangles
-(use-package move-dup
-  :bind (("M-p"   . move-dup-move-lines-up)
-         ("C-M-p" . move-dup-duplicate-up)
-         ("M-n"   . move-dup-move-lines-down)
-         ("C-M-n" . move-dup-duplicate-down))
-  :init
-  (add-hook 'after-init-hook 'move-dup-mode))
 
 ;; Magit
 (use-package magit
