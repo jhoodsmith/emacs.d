@@ -18,7 +18,6 @@
 (setq-default
  user-full-name "James Hood-Smith"
  user-mail-address "james@hood-smith.me.uk"
- org-agenda-files '("~/org")
  ispell-dictionary "british")
 
 ;; Some basic preferences
@@ -190,6 +189,7 @@
 (setq-default org-confirm-babel-evaluate nil
               org-image-actual-width nil
               org-src-fontify-natively t
+              org-agenda-files '("~/org")
               org-capture-templates '(("n" "Note" entry (file "~/org/inbox.org")
                                        "* %?\nEntered on %U\n  %i\n  %a")))
 
