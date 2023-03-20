@@ -78,6 +78,13 @@
 (when (file-exists-p custom-file)
   (load custom-file))
 
+;; Moving and duplicating lines of rectangles
+(use-package move-dup
+  :bind (([M-up] . move-dup-move-lines-up)
+         ([M-down]  . move-dup-move-lines-down))
+  :init
+  (add-hook 'after-init-hook 'move-dup-mode))
+
 ;; Theme
 (use-package exotica-theme
   :config (load-theme 'exotica t))
@@ -140,7 +147,7 @@
   (add-hook 'after-init-hook 'projectile-mode)
   (require 'magit)
   (mapc #'projectile-add-known-project
-        (mapcar #'file-name-as-directory (magit-list-repos)))
+        (mapcar #'file-name-as-directory (magit-list-repos)))q
   :bind (:map projectile-mode-map
               ("C-c p" . projectile-command-map)))
 
