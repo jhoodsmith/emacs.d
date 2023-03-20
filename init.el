@@ -1,8 +1,12 @@
 ;;;; init.el -- My Emacs configuration
 ;;;; Commentary:
 
-;; Package management
+;;;; Code:
 
+;; My local lisp functions
+(add-to-list 'load-path (expand-file-name "lisp" user-emacs-directory))
+
+;; Package management
 (require 'package)
 (add-to-list 'package-archives '("melpa" . "https://melpa.org/packages/"))
 (package-initialize)
@@ -26,18 +30,15 @@
  buffers-menu-max-size 30
  case-fold-search t
  column-number-mode t
- ediff-split-window-function 'split-window-horizontally
- ediff-window-setup-function 'ediff-setup-windows-plain
  indent-tabs-mode nil
  create-lockfiles nil
  auto-save-default nil
  make-backup-files nil
- mouse-yank-at-point t
- save-interprogram-paste-before-kill t
- scroll-preserve-screen-position 'always
- set-mark-command-repeat-pop t
- truncate-lines nil
- truncate-partial-width-windows nil)
+ truncate-lines nil)
+
+;; Don't disable case-change functions
+(put 'upcase-region 'disabled nil)
+(put 'downcase-region 'disabled nil)
 
 ;; Line numbering
 (setq-default display-line-numbers-width 3)
@@ -180,6 +181,9 @@
 ;; markdown
 (use-package markdown-mode)
 
+;; Edit regions in separate buffers
+(use-package edit-indirect)
+
 ;; Ruby
 (use-package inf-ruby)
 
@@ -240,6 +244,9 @@
   (dolist (var '("SSH_AUTH_SOCK" "SSH_AGENT_PID" "LANG"))
     (add-to-list 'exec-path-from-shell-variables var))
   (exec-path-from-shell-initialize))
+
+;; Switch Java
+(require 'switch-java)
 
 (provide 'init)
 ;;; init.el ends here
