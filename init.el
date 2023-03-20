@@ -5,6 +5,7 @@
 
 ;; My local lisp functions
 (add-to-list 'load-path (expand-file-name "lisp" user-emacs-directory))
+(setq elisp-flymake-byte-compile-load-path load-path)
 
 ;; Package management
 (require 'package)
@@ -101,9 +102,13 @@
   (global-company-mode t))
 
 ;; Documentation popup
-(use-package company-quickhelp
-  :init
-  (add-hook 'after-init-hook 'company-quickhelp-mode))
+;; (use-package company-quickhelp
+;;   :init
+;;   (add-hook 'after-init-hook 'company-quickhelp-mode))
+
+(use-package company-box
+  :diminish
+  :hook (company-mode . company-box-mode))
 
 ;; Flymake
 (require 'flymake)
@@ -160,8 +165,20 @@
 
 ;; orderless completion style
 (use-package orderless
+  :ensure t
   :custom
-  (completion-styles '(substring orderless)))
+  (completion-styles '(orderless basic))
+  (completion-category-overrides '((file (styles basic partial-completion)))))
+
+;; Do not use Orderless with Company
+(defun company-completion-styles (capf-fn &rest args)
+  "Set Company-specific completion-styles.
+
+   CAPF-FN is `company-capf' function.
+   ARGS is list of function arguments."
+  (let ((completion-styles '(basic partial-completion)))
+    (apply capf-fn args)))
+(advice-add 'company-capf :around #'company-completion-styles)
 
 ;; Search and navigation
 (use-package consult
@@ -172,7 +189,7 @@
    ([remap goto-line] . consult-goto-line))
   :custom
   (consult-project-root-function 'projectile-project-root))
-  
+
 ;; spelling
 (require 'ispell)
 (when (executable-find ispell-program-name)
