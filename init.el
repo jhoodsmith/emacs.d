@@ -1,7 +1,13 @@
-;;;; init.el -- My Emacs configuration
-;;;; Commentary:
+;;; init.el -- My Emacs configuration  -*- lexical-binding: t -*-
 
-;;;; Code:
+;; Copyright (C) 2023  James Hood-Smith
+;; Author: James Hood-Smith <james@hood-smith.co.uk>
+
+;; This file is NOT part of GNU Emacs.
+
+;;; Commentary:
+
+;;; Code:
 
 ;; My local lisp functions
 (add-to-list 'load-path (expand-file-name "lisp" user-emacs-directory))
@@ -54,10 +60,8 @@
   :diminish
   :hook prog-mode
   :bind (:map symbol-overlay-mode-map
-              ("M-i" . symbol-overlay-put)
-              ("M-I" . symbol-overlay-remove-all)
               ("M-n" . symbol-overlay-jump-next)
-              ("M-i" . symbol-overlay-jump-prev)))
+              ("M-p" . symbol-overlay-jump-prev)))
 
 ;; Visual bell
 (defun flash-mode-line ()
@@ -84,6 +88,12 @@
          ([M-down]  . move-dup-move-lines-down))
   :init
   (add-hook 'after-init-hook 'move-dup-mode))
+
+;; Beacon for never losing cursor
+(use-package beacon
+  :diminish
+  :init
+  (add-hook 'after-init-hook 'beacon-mode))
 
 ;; Theme
 (use-package exotica-theme
@@ -147,7 +157,7 @@
   (add-hook 'after-init-hook 'projectile-mode)
   (require 'magit)
   (mapc #'projectile-add-known-project
-        (mapcar #'file-name-as-directory (magit-list-repos)))q
+        (mapcar #'file-name-as-directory (magit-list-repos)))
   :bind (:map projectile-mode-map
               ("C-c p" . projectile-command-map)))
 
@@ -257,6 +267,13 @@
 
 ;; Switch Java
 (require 'switch-java)
+
+;; eglot
+(with-eval-after-load 'eglot
+  (setq-default eglot-workspace-configuration
+                '(:solargraph (:diagnostics t)))
+  (add-to-list 'eglot-server-programs
+               '(ruby-mode . ("localhost" 7658))))
 
 (provide 'init)
 ;;; init.el ends here
