@@ -9,8 +9,18 @@
 
 ;;; Code:
 
-;; My local lisp functions
+;; Emacs version
+
+(let ((minver "29"))
+  (when (version< emacs-version minver)
+    (error "You're running Emacs %s. This config requires version %s or higher"
+           emacs-version
+           minver)))
+
+;; Load path
 (add-to-list 'load-path (expand-file-name "lisp" user-emacs-directory))
+(add-to-list 'load-path (expand-file-name "site-lisp" user-emacs-directory))
+
 (setq elisp-flymake-byte-compile-load-path load-path)
 
 ;; Package management
@@ -55,20 +65,11 @@
 (use-package rainbow-delimiters
   :hook prog-mode)
 
-;; Symbol overlay
-(use-package symbol-overlay
-  :diminish
-  :hook prog-mode
-  :bind (:map symbol-overlay-mode-map
-              ("M-n" . symbol-overlay-jump-next)
-              ("M-p" . symbol-overlay-jump-prev)))
-
 ;; Visual bell
-(defun flash-mode-line ()
-  "Flash mode string."
+(defun my/flash-mode-line ()
   (invert-face 'mode-line)
   (run-with-timer 0.1 nil #'invert-face 'mode-line))
-(setq visible-bell nil ring-bell-function 'flash-mode-line)
+(setq visible-bell nil ring-bell-function 'my/flash-mode-line)
 
 ;; Keyboard-centric user interface
 (setq inhibit-startup-message t)
@@ -148,7 +149,8 @@
      ("~/org/"      . 0)
      ("~/.emacs.d/" . 0))))
 
-(use-package git-timemachine)
+(use-package git-timemachine
+  :bind ("C-x v t" . git-timemachine-toggle))
 
 ;; Projectile
 (use-package projectile
@@ -174,14 +176,10 @@
   (completion-category-overrides '((file (styles basic partial-completion)))))
 
 ;; Do not use Orderless with Company
-(defun company-completion-styles (capf-fn &rest args)
-  "Set Company-specific completion-styles.
-
-   CAPF-FN is `company-capf' function.
-   ARGS is list of function arguments."
+(defun my/company-completion-styles (capf-fn &rest args)
   (let ((completion-styles '(basic partial-completion)))
     (apply capf-fn args)))
-(advice-add 'company-capf :around #'company-completion-styles)
+(advice-add 'company-capf :around #'my/company-completion-styles)
 
 ;; Search and navigation
 (use-package consult
@@ -208,14 +206,22 @@
 (use-package inf-ruby)
 
 ;; Org
-(define-key global-map (kbd "C-c c")
-            (lambda () (interactive) (org-capture nil "n")))
+(defun my/new-org-note ()
+     (interactive)
+     (org-capture nil "n"))
+(global-set-key (kbd "C-c n") #'my/new-org-note)
+
 (setq-default org-confirm-babel-evaluate nil
               org-image-actual-width nil
+              org-startup-with-inline-images t
+              org-src-window-setup 'other-window
               org-src-fontify-natively t
               org-agenda-files '("~/org")
               org-capture-templates '(("n" "Note" entry (file "~/org/inbox.org")
                                        "* %?\nEntered on %U\n  %i\n  %a")))
+
+;; update images in the buffer after I evaluate
+(add-hook 'org-babel-after-execute-hook 'org-display-inline-images)
 
 ;; Enable languages for Babel
 (org-babel-do-load-languages
@@ -261,19 +267,48 @@
 (use-package exec-path-from-shell
   :if (memq window-system '(mac ns))
   :config
-  (dolist (var '("SSH_AUTH_SOCK" "SSH_AGENT_PID" "LANG"))
-    (add-to-list 'exec-path-from-shell-variables var))
   (exec-path-from-shell-initialize))
 
 ;; Switch Java
 (require 'switch-java)
 
-;; eglot
-(with-eval-after-load 'eglot
+;; Eglot
+(when (bound-and-true-p read-process-output-max)
+  (setq read-process-output-max (* 1024 1024)))
+
+(use-package eglot
+  :config
+  (setq eglot-autoshutdown t
+        eglot-stay-out-of '(eldoc)))
+
+(use-package consult-eglot)
+
+;; Ruby
+(defun my/ruby-set-lsp-config ()
+  "Load LSP config from solargraph.json."
   (setq-default eglot-workspace-configuration
-                '(:solargraph (:diagnostics t)))
-  (add-to-list 'eglot-server-programs
-               '(ruby-mode . ("localhost" 7658))))
+              (let* ((config-file (file-name-concat user-emacs-directory "lsp-config" "solargraph.json")))
+                (with-temp-buffer
+                  (insert-file-contents config-file)
+                  (json-parse-buffer :object-type 'plist :false-object :json-false)))))
+
+(add-hook 'ruby-mode-hook #'my/ruby-set-lsp-config)
+
+;; Terraform
+(use-package terraform-mode)
+(use-package company-terraform
+  :hook (terraform-mode . company-terraform-init))
+
+;; Silver surfer
+(use-package ag)
+
+;; SQL
+(use-package sql-indent
+  :hook (sql-mode . sqlind-minor-mode))
+
+;; JavaScript
+(use-package typescript-mode)
 
 (provide 'init)
+
 ;;; init.el ends here
