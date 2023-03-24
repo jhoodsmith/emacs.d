@@ -19,8 +19,6 @@
 
 ;; Load path
 (add-to-list 'load-path (expand-file-name "lisp" user-emacs-directory))
-(add-to-list 'load-path (expand-file-name "site-lisp" user-emacs-directory))
-
 (setq elisp-flymake-byte-compile-load-path load-path)
 
 ;; Package management
@@ -32,7 +30,6 @@
 (setq use-package-always-ensure 't)
 
 ;; Global keybindings
-(global-set-key (kbd "M-o") 'other-window)
 (global-set-key (kbd "M-3") (lambda () (interactive) (insert "#")))
 
 ;; Personal configuration
@@ -44,7 +41,6 @@
 ;; Some basic preferences
 (setq-default
  fill-column 80
- buffers-menu-max-size 30
  case-fold-search t
  column-number-mode t
  indent-tabs-mode nil
@@ -60,6 +56,19 @@
 ;; Line numbering
 (setq-default display-line-numbers-width 3)
 (add-hook 'prog-mode-hook 'display-line-numbers-mode)
+
+;; Switch Window
+(use-package switch-window
+  :config
+  (setq-default switch-window-shortcut-style 'alphabet)
+  :bind (("M-o" . switch-window)
+         ("C-x 1" . switch-window-then-maximize)
+         ("C-x 2" . switch-window-then-split-below)
+         ("C-x 3" . switch-window-then-split-right)
+         ("C-x 0" . switch-window-then-delete)
+         ("C-x 4 d" . 'switch-window-then-dired)
+         ("C-x 4 f" . 'switch-window-then-find-file)
+         ("C-x 4 0" . 'switch-window-then-kill-buffer)))
 
 ;; Rainbow delimiters
 (use-package rainbow-delimiters
@@ -163,6 +172,12 @@
   :bind (:map projectile-mode-map
               ("C-c p" . projectile-command-map)))
 
+(use-package projectile-rails
+  :bind-keymap
+  ("C-c r" . projectile-rails-command-map)
+  :config
+  (projectile-rails-global-mode))
+
 ;; Vertical display in minibuffer
 (use-package vertico
   :init
@@ -170,7 +185,6 @@
 
 ;; orderless completion style
 (use-package orderless
-  :ensure t
   :custom
   (completion-styles '(orderless basic))
   (completion-category-overrides '((file (styles basic partial-completion)))))
@@ -273,9 +287,6 @@
 (require 'switch-java)
 
 ;; Eglot
-(when (bound-and-true-p read-process-output-max)
-  (setq read-process-output-max (* 1024 1024)))
-
 (use-package eglot
   :config
   (setq eglot-autoshutdown t
@@ -284,6 +295,10 @@
 (use-package consult-eglot)
 
 ;; Ruby
+(with-eval-after-load 'eglot
+  (add-to-list 'eglot-server-programs
+               '(ruby-mode . ("bundle" "exec" "solargraph" "stdio"))))
+               
 (defun my/ruby-set-lsp-config ()
   "Load LSP config from solargraph.json."
   (setq-default eglot-workspace-configuration
