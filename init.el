@@ -54,7 +54,6 @@
 (put 'downcase-region 'disabled nil)
 
 ;; Line numbering
-(setq-default display-line-numbers-width 3)
 (add-hook 'prog-mode-hook 'display-line-numbers-mode)
 
 ;; Switch Window
@@ -66,9 +65,9 @@
          ("C-x 2" . switch-window-then-split-below)
          ("C-x 3" . switch-window-then-split-right)
          ("C-x 0" . switch-window-then-delete)
-         ("C-x 4 d" . 'switch-window-then-dired)
-         ("C-x 4 f" . 'switch-window-then-find-file)
-         ("C-x 4 0" . 'switch-window-then-kill-buffer)))
+         ("C-x 4 d" . switch-window-then-dired)
+         ("C-x 4 f" . switch-window-then-find-file)
+         ("C-x 4 0" . switch-window-then-kill-buffer)))
 
 ;; Rainbow delimiters
 (use-package rainbow-delimiters
@@ -237,6 +236,8 @@
 ;; update images in the buffer after I evaluate
 (add-hook 'org-babel-after-execute-hook 'org-display-inline-images)
 
+(use-package ob-restclient)
+
 ;; Enable languages for Babel
 (org-babel-do-load-languages
  'org-babel-load-languages
@@ -246,6 +247,7 @@
    (R . t)
    (haskell . t)
    (clojure . t)
+   (restclient . t)
    (java . t)
    (plantuml . t)
    (python . t)))
@@ -324,6 +326,11 @@
 ;; JavaScript
 (use-package typescript-mode)
 
+(use-package nodejs-repl
+  :bind (:map js-mode-map
+         ("C-x C-e" . nodejs-repl-send-last-expression)
+         ("C-c C-r" . nodejs-repl-send-region)))
+  
 (provide 'init)
 
 ;;; init.el ends here
