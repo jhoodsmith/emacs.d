@@ -1,6 +1,6 @@
 ;;; init.el -- My Emacs configuration  -*- lexical-binding: t -*-
 
-;; Copyright (C) 2023  James Hood-Smith
+;; Copyright (C) 2023 James Hood-Smith
 ;; Author: James Hood-Smith <james@hood-smith.co.uk>
 
 ;; This file is NOT part of GNU Emacs.
@@ -82,7 +82,6 @@
 ;; Keyboard-centric user interface
 (setq inhibit-startup-message t)
 (tool-bar-mode -1)
-(menu-bar-mode -1)
 (scroll-bar-mode -1)
 (fset 'yes-or-no-p 'y-or-n-p)
 
@@ -330,6 +329,17 @@
   :bind (:map js-mode-map
          ("C-x C-e" . nodejs-repl-send-last-expression)
          ("C-c C-r" . nodejs-repl-send-region)))
+
+;; Yasnippet
+(use-package yasnippet
+  :bind
+  ("C-c y s" . yas-insert-snippet)
+  ("C-c y v" . yas-visit-snippet-file)
+  :config
+  (add-to-list 'yas-snippet-dirs "~/.emacs.d/snippets")
+  (yas-global-mode 1))
+
+(use-package yasnippet-snippets)
   
 (provide 'init)
 
