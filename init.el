@@ -297,9 +297,11 @@
 
 ;; Ruby
 (with-eval-after-load 'eglot
+  ;; (add-to-list 'eglot-server-programs
+  ;;              '(ruby-mode . ("localhost" 7658))))
   (add-to-list 'eglot-server-programs
                '(ruby-mode . ("bundle" "exec" "solargraph" "stdio"))))
-               
+
 (defun my/ruby-set-lsp-config ()
   "Load LSP config from solargraph.json."
   (setq-default eglot-workspace-configuration
@@ -340,7 +342,34 @@
   (yas-global-mode 1))
 
 (use-package yasnippet-snippets)
-  
+
+;; Web browser
+(use-package eww
+  :commands eww eww-follow-link
+  :init
+  (setq browse-url-browser-function 'eww-browse-url)
+  (setq eww-search-prefix "http://www.google.com/search?q=")
+
+  (defun eww-wiki (text)
+    "Function used to search wikipedia for the given text."
+    (interactive (list (read-string "Wiki for: ")))
+    (eww (format "https://en.m.wikipedia.org/wiki/Special:Search?search=%s"
+                 (url-encode-url text))))
+
+  :bind (("C-c w w" . eww)
+         ("C-c w i" . eww-wiki)
+         ("C-c w l" . eww-follow-link)))
+
+;; Clojure
+(use-package clojure-mode)
+(use-package cider)
+
+(use-package paredit
+  :hook ((emacs-lisp-mode . paredit-mode)
+         (clojure-mode . paredit-mode)
+         (clojurescript-mode . paredit-mode)
+         (cider-repl-mode . paredit-mode))
+  :bind (:map paredit-mode-map ("RET" . nil)))
 (provide 'init)
 
 ;;; init.el ends here
