@@ -6,3 +6,5 @@
 !init.el
 !lisp/
 !lisp/*
+!lsp-config/
+!lsp-config/*

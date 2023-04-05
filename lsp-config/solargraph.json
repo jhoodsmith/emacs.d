@@ -1,0 +1,10 @@
+{
+    "solargraph": {
+        "diagnostics": true,
+        "folding": true,
+        "rename": true,
+        "definitions": true,
+        "completion": true,
+        "references": true
+    }
+}
