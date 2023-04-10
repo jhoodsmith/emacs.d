@@ -364,6 +364,10 @@
 (use-package clojure-mode)
 (use-package cider)
 
+;; Install deps-new
+;; clojure -Ttools install io.github.seancorfield/deps-new '{:git/tag "v0.5.1"}' :as new
+(use-package clj-deps-new)
+
 (use-package paredit
   :hook ((emacs-lisp-mode . paredit-mode)
          (clojure-mode . paredit-mode)
