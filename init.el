@@ -244,6 +244,7 @@
    (ruby . t)
    (sql . t)
    (R . t)
+   (dot . t)
    (haskell . t)
    (clojure . t)
    (restclient . t)
@@ -375,5 +376,16 @@
          (cider-repl-mode . paredit-mode))
   :bind (:map paredit-mode-map ("RET" . nil)))
 (provide 'init)
+
+;; Emacs package for working with Graphviz DOT-format files
+(use-package graphviz-dot-mode
+  :config
+  (setq graphviz-dot-indent-width 4))
+
+;; Dictionary configuration
+(use-package dictionary
+  :bind (("C-c l" . dictionary-lookup-definition))
+  :config
+  (setq dictionary-server "dict.org"))
 
 ;;; init.el ends here
