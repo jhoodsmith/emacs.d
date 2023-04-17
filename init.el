@@ -2,10 +2,13 @@
 
 ;; Copyright (C) 2023 James Hood-Smith
 ;; Author: James Hood-Smith <james@hood-smith.co.uk>
+;; URL: https://github.com/jhoodsmith/emacs.d
 
 ;; This file is NOT part of GNU Emacs.
 
 ;;; Commentary:
+
+;; This is my personal Emacs configuration.
 
 ;;; Code:
 
