@@ -231,7 +231,7 @@
               org-startup-with-inline-images t
               org-src-window-setup 'other-window
               org-src-fontify-natively t
-              org-agenda-files '("~/org")
+              org-agenda-files (directory-files-recursively "~/org" "\\.org$")
               org-capture-templates '(("n" "Note" entry (file "~/org/inbox.org")
                                        "* %?\nEntered on %U\n  %i\n  %a")))
 
