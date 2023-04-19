@@ -271,8 +271,8 @@
 
 ;; Restclient
 (use-package restclient
-  :mode (("\\.rest\\'" . restclient-mode)
-         ("\\.http\\'" . restclient-mode)))
+  :mode (((rx ".rest" eos) . restclient-mode)
+         ((rx ".http" eos) . restclient-mode)))
 
 ;; LaTeX
 (use-package tex
@@ -293,19 +293,19 @@
 
 ;; Eglot
 (use-package eglot
+  :ensure nil
   :config
   (setq eglot-autoshutdown t
         eglot-stay-out-of '(eldoc)))
 
 (use-package consult-eglot)
 
-;; Ruby
 (with-eval-after-load 'eglot
   ;; (add-to-list 'eglot-server-programs
   ;;              '(ruby-mode . ("localhost" 7658))))
-  (add-to-list 'eglot-server-programs
-               '(ruby-mode . ("bundle" "exec" "solargraph" "stdio"))))
+  (add-to-list 'eglot-server-programs '((ruby-mode ruby-ts-mode) . ("bundle" "exec" "solargraph" "stdio"))))
 
+;; Ruby
 (defun my/ruby-set-lsp-config ()
   "Load LSP config from solargraph.json."
   (setq-default eglot-workspace-configuration
@@ -315,6 +315,7 @@
                   (json-parse-buffer :object-type 'plist :false-object :json-false)))))
 
 (add-hook 'ruby-mode-hook #'my/ruby-set-lsp-config)
+(add-hook 'ruby-ts-mode-hook #'my/ruby-set-lsp-config)
 
 ;; Terraform
 (use-package terraform-mode)
@@ -327,14 +328,6 @@
 ;; SQL
 (use-package sql-indent
   :hook (sql-mode . sqlind-minor-mode))
-
-;; JavaScript
-(use-package typescript-mode)
-
-(use-package nodejs-repl
-  :bind (:map js-mode-map
-         ("C-x C-e" . nodejs-repl-send-last-expression)
-         ("C-c C-r" . nodejs-repl-send-region)))
 
 ;; Yasnippet
 (use-package yasnippet
@@ -351,7 +344,7 @@
 (use-package eww
   :commands eww eww-follow-link
   :init
-  (setq browse-url-browser-function 'eww-browse-url)
+  ;; (setq browse-url-browser-function 'eww-browse-url)
   (setq eww-search-prefix "http://www.google.com/search?q=")
 
   (defun eww-wiki (text)
@@ -388,7 +381,50 @@
 ;; Dictionary configuration
 (use-package dictionary
   :bind (("C-c l" . dictionary-lookup-definition))
-  :config
-  (setq dictionary-server "dict.org"))
+  :custom (dictionary-server "dict.org"))
+
+;; Node
+(use-package nodejs-repl
+  :bind (:map js-mode-map
+         ("C-x C-e" . nodejs-repl-send-last-expression)
+         ("C-c C-r" . nodejs-repl-send-region)))
+
+;;  Tree sitter
+(use-package treesit
+  :ensure nil
+  :custom
+  (treesit-extra-load-path
+   `(,(expand-file-name "elpa/tree-sitter-module/dist/" user-emacs-directory)))
+  (treesit-font-lock-level 4)
+  :init
+  (push '(javascript-mode . js-ts-mode) major-mode-remap-alist)
+  (push '(js-mode . js-ts-mode) major-mode-remap-alist)
+  (push '(java-mode . java-ts-mode) major-mode-remap-alist)
+  (push '(js-json-mode . json-ts-mode) major-mode-remap-alist)
+  (push '(ruby-mode . ruby-ts-mode) major-mode-remap-alist)
+  (push '(python-mode . python-ts-mode) major-mode-remap-alist))
+
+;; HTML
+(use-package sgml-mode
+  :ensure nil
+  :hook
+  (html-mode . sgml-electric-tag-pair-mode)
+  (html-mode . sgml-name-8bit-mode)
+  :custom
+  (sgml-basic-offset 2))
+
+;; Javascript
+(use-package js
+  :ensure nil
+  :custom
+  (js-indent-level 2))
+
+;; Typescript
+(use-package typescript-ts-mode
+  :hook
+  (tsx-ts-mode . sgml-electric-tag-pair-mode)
+  :mode
+  ((rx ".ts" eos) . typescript-ts-mode)
+  ((rx ".tsx" eos) . tsx-ts-mode))
 
 ;;; init.el ends here
