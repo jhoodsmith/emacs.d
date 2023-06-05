@@ -441,7 +441,9 @@
   :bind (:map copilot-mode-map
          ("M-n" . copilot-next-completion)
          ("M-p" . copilot-previous-completion)
-         ("M-<return>" . copilot-accept-completion)))
+         ("M-<return>" . copilot-accept-completion))
+  :init
+  (global-copilot-mode))
 
 ;; Org-AI
 (use-package org-ai
