@@ -432,15 +432,16 @@
   ((rx ".tsx" eos) . tsx-ts-mode))
 
 ;; Copilot
-;; Not convinced that this works for me yet.
 (use-package editorconfig)
 
 (use-package copilot
   :load-path (lambda () (expand-file-name "copilot.el" user-emacs-directory))
+  :commands (global-copilot-mode)
   :diminish
-  :init)
-
-;; (global-copilot-mode)
+  :bind (:map copilot-mode-map
+         ("M-n" . copilot-next-completion)
+         ("M-p" . copilot-previous-completion)
+         ("M-<return>" . copilot-accept-completion)))
 
 ;; Org-AI
 (use-package org-ai
@@ -448,7 +449,6 @@
   :init
   (add-hook 'org-mode-hook #'org-ai-mode)
   (org-ai-global-mode)
-
   :config
   (org-ai-install-yasnippets))
 
