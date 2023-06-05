@@ -217,9 +217,6 @@
 ;; Edit regions in separate buffers
 (use-package edit-indirect)
 
-;; Ruby
-(use-package inf-ruby)
-
 ;; Org
 (defun my/new-org-note ()
      (interactive)
@@ -316,6 +313,13 @@
 
 (add-hook 'ruby-mode-hook #'my/ruby-set-lsp-config)
 (add-hook 'ruby-ts-mode-hook #'my/ruby-set-lsp-config)
+
+(use-package inf-ruby
+  :config
+  (defun my/rails-console ()
+    "Run a Rails console."
+    (interactive)
+    (inf-ruby-console-run "bundle exec rails c -- --nomultiline" "rails")))
 
 ;; Terraform
 (use-package terraform-mode)
@@ -426,5 +430,29 @@
   :mode
   ((rx ".ts" eos) . typescript-ts-mode)
   ((rx ".tsx" eos) . tsx-ts-mode))
+
+;; Copilot
+;; Not convinced that this works for me yet.
+(use-package editorconfig)
+
+(use-package copilot
+  :load-path (lambda () (expand-file-name "copilot.el" user-emacs-directory))
+  :diminish
+  :init)
+
+;; (global-copilot-mode)
+
+;; Org-AI
+(use-package org-ai
+  :commands (org-ai-mode org-ai-global-mode)
+  :init
+  (add-hook 'org-mode-hook #'org-ai-mode)
+  (org-ai-global-mode)
+
+  :config
+  (org-ai-install-yasnippets))
+
+;; Configure warnings
+(setq-default warning-minimum-level :error)
 
 ;;; init.el ends here
