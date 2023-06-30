@@ -250,7 +250,8 @@
    (restclient . t)
    (java . t)
    (plantuml . t)
-   (python . t)))
+   (python . t)
+   (shell . t)))
 
 ;; Plantuml
 (use-package plantuml-mode
