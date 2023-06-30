@@ -394,7 +394,9 @@
          ("C-x C-e" . nodejs-repl-send-last-expression)
          ("C-c C-r" . nodejs-repl-send-region)))
 
-;;  Tree sitter
+;; Tree sitter
+;; brew install tree-sitter
+;; brew install emacs-plus@29 --with-native-comp
 (use-package treesit
   :ensure nil
   :custom
