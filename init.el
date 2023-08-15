@@ -437,6 +437,22 @@
 ;; Copilot
 (use-package editorconfig)
 
+(defvar my/no-copilot-modes '(shell-mode
+                              eshell-mode
+                              term-mode
+                              vterm-mode
+                              comint-mode
+                              compilation-mode
+                              debugger-mode
+                              dired-mode-hook
+                              compilation-mode-hook
+                              minibuffer-mode-hook)
+  "Modes in which copilot is inconvenient.")
+
+(defun my/copilot-disable-predicate ()
+  "When copilot should not automatically show completions."
+  (member major-mode my/no-copilot-modes))
+
 (use-package copilot
   :load-path (lambda () (expand-file-name "copilot.el" user-emacs-directory))
   :commands (global-copilot-mode)
@@ -446,7 +462,8 @@
          ("M-p" . copilot-previous-completion)
          ("M-<return>" . copilot-accept-completion))
   :init
-  (global-copilot-mode))
+  (global-copilot-mode)
+  (add-to-list 'copilot-disable-predicates #'my/copilot-disable-predicate))
 
 ;; Org-AI
 (use-package org-ai
