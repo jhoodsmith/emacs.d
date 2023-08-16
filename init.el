@@ -219,8 +219,10 @@
 
 ;; Org
 (defun my/new-org-note ()
-     (interactive)
-     (org-capture nil "n"))
+  "Create a new note in ~/org/inbox.org."
+  (interactive)
+  (org-capture nil "n"))
+
 (global-set-key (kbd "C-c n") #'my/new-org-note)
 
 (setq-default org-confirm-babel-evaluate nil
