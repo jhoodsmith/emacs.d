@@ -396,12 +396,10 @@
 
 ;; Tree sitter
 ;; brew install tree-sitter
-;; brew install emacs-plus@29 --with-native-comp
+
 (use-package treesit
   :ensure nil
   :custom
-  (treesit-extra-load-path
-   `(,(expand-file-name "elpa/tree-sitter-module/dist/" user-emacs-directory)))
   (treesit-font-lock-level 4)
   :init
   (push '(javascript-mode . js-ts-mode) major-mode-remap-alist)
@@ -409,7 +407,29 @@
   (push '(java-mode . java-ts-mode) major-mode-remap-alist)
   (push '(js-json-mode . json-ts-mode) major-mode-remap-alist)
   (push '(ruby-mode . ruby-ts-mode) major-mode-remap-alist)
-  (push '(python-mode . python-ts-mode) major-mode-remap-alist))
+  (push '(python-mode . python-ts-mode) major-mode-remap-alist)
+  :custom
+  (treesit-language-source-alist
+   '((bash "https://github.com/tree-sitter/tree-sitter-bash")
+     (cmake "https://github.com/uyha/tree-sitter-cmake")
+     (css "https://github.com/tree-sitter/tree-sitter-css")
+     (elisp "https://github.com/Wilfred/tree-sitter-elisp")
+     (go "https://github.com/tree-sitter/tree-sitter-go")
+     (html "https://github.com/tree-sitter/tree-sitter-html")
+     (javascript "https://github.com/tree-sitter/tree-sitter-javascript" "master" "src")
+     (json "https://github.com/tree-sitter/tree-sitter-json")
+     (make "https://github.com/alemuller/tree-sitter-make")
+     (markdown "https://github.com/ikatyang/tree-sitter-markdown")
+     (python "https://github.com/tree-sitter/tree-sitter-python")
+     (ruby "https://github.com/tree-sitter/tree-sitter-ruby")
+     (toml "https://github.com/tree-sitter/tree-sitter-toml")
+     (tsx "https://github.com/tree-sitter/tree-sitter-typescript" "master" "tsx/src")
+     (typescript "https://github.com/tree-sitter/tree-sitter-typescript" "master" "typescript/src")
+     (yaml "https://github.com/ikatyang/tree-sitter-yaml"))))
+
+;; To install all language grammars
+
+;; (mapc #'treesit-install-language-grammar (mapcar #'car treesit-language-source-alist))
 
 ;; HTML
 (use-package sgml-mode
