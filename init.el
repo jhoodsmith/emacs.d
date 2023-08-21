@@ -59,6 +59,12 @@
 ;; Line numbering
 (add-hook 'prog-mode-hook 'display-line-numbers-mode)
 
+;; Exec path from shell
+(use-package exec-path-from-shell
+  :if (memq window-system '(mac ns))
+  :config
+  (exec-path-from-shell-initialize))
+
 ;; Switch Window
 (use-package switch-window
   :config
@@ -281,12 +287,6 @@
 ;; Vterm
 (use-package vterm
   :custom (vterm-install t))
-
-;; Exec path from shell
-(use-package exec-path-from-shell
-  :if (memq window-system '(mac ns))
-  :config
-  (exec-path-from-shell-initialize))
 
 ;; Switch Java
 (require 'switch-java)
