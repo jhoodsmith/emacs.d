@@ -236,6 +236,7 @@
               org-startup-with-inline-images t
               org-src-window-setup 'other-window
               org-src-fontify-natively t
+              org-babel-python-command "python3"
               org-agenda-files (directory-files-recursively "~/org" "\\.org$")
               org-capture-templates '(("n" "Note" entry (file "~/org/inbox.org")
                                        "* %?\nEntered on %U\n  %i\n  %a")))
@@ -244,6 +245,18 @@
 (add-hook 'org-babel-after-execute-hook 'org-display-inline-images)
 
 (use-package ob-restclient)
+
+;; Start EIN using ONE of the following:
+;; Open an .ipynb file, press C-c C-o, or,
+;; M-x ein:run launches a jupyter process from emacs, or,
+;; M-x ein:login to a running jupyter server
+
+(use-package ein)
+
+;; Requires mermaid-cli: npm install -g @mermaid-js/mermaid-cli
+(use-package ob-mermaid
+  :custom
+  (org-mermaid-cli-path "/opt/homebrew/bin/mmdc"))
 
 ;; Enable languages for Babel
 (org-babel-do-load-languages
@@ -259,6 +272,7 @@
    (java . t)
    (plantuml . t)
    (python . t)
+   (mermaid . t)
    (shell . t)))
 
 ;; Plantuml
@@ -468,6 +482,7 @@
                               debugger-mode
                               dired-mode-hook
                               compilation-mode-hook
+                              cider-repl-mode
                               minibuffer-mode-hook)
   "Modes in which copilot is inconvenient.")
 
