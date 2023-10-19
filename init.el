@@ -113,8 +113,11 @@
   (add-hook 'after-init-hook 'beacon-mode))
 
 ;; Theme
-(use-package exotica-theme
-  :config (load-theme 'exotica t))
+;; (use-package exotica-theme
+;;   :config (load-theme 'exotica t))
+
+(use-package material-theme
+  :config (load-theme 'material t))
 
 ;; Diminish
 (use-package diminish)
@@ -284,6 +287,10 @@
 
 ;; Export to Hugo
 (use-package ox-hugo)
+
+;; Copies selected regions in org-mode and transforms to formatted output
+;; use ox-clip-formatted-copy
+(use-package ox-clip)
 
 ;; Docker
 (use-package dockerfile-mode)
@@ -462,6 +469,9 @@
   :custom
   (js-indent-level 2))
 
+;; JSON
+(use-package json-mode)
+
 ;; Typescript
 (use-package typescript-ts-mode
   :hook
@@ -473,23 +483,6 @@
 ;; Copilot
 (use-package editorconfig)
 
-(defvar my/no-copilot-modes '(shell-mode
-                              eshell-mode
-                              term-mode
-                              vterm-mode
-                              comint-mode
-                              compilation-mode
-                              debugger-mode
-                              dired-mode-hook
-                              compilation-mode-hook
-                              cider-repl-mode
-                              minibuffer-mode-hook)
-  "Modes in which copilot is inconvenient.")
-
-(defun my/copilot-disable-predicate ()
-  "When copilot should not automatically show completions."
-  (member major-mode my/no-copilot-modes))
-
 (use-package copilot
   :load-path (lambda () (expand-file-name "copilot.el" user-emacs-directory))
   :commands (global-copilot-mode)
@@ -498,9 +491,9 @@
          ("M-n" . copilot-next-completion)
          ("M-p" . copilot-previous-completion)
          ("M-<return>" . copilot-accept-completion))
-  :init
-  (global-copilot-mode)
-  (add-to-list 'copilot-disable-predicates #'my/copilot-disable-predicate))
+  :hook
+  (text-mode . copilot-mode)
+  (prog-mode . copilot-mode))
 
 ;; Org-AI
 (use-package org-ai
