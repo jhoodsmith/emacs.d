@@ -285,6 +285,25 @@
   (plantuml-jar-path (expand-file-name "~/bin/plantuml.jar"))
   (org-plantuml-jar-path (expand-file-name "~/bin/plantuml.jar")))
 
+(use-package pytest)
+
+;; Python
+(use-package python-mode
+  :ensure nil
+  :bind (:map python-ts-mode-map
+              ("C-c C-t t" . pytest-one)))
+
+(use-package pyenv-mode
+  :config
+  (defun projectile-pyenv-mode-set ()
+    "Set pyenv version matching project name."
+    (let ((project (projectile-project-name)))
+      (if (member project (pyenv-mode-versions))
+          (pyenv-mode-set project)
+        (pyenv-mode-unset))))
+  (add-hook 'projectile-switch-project-hook 'projectile-pyenv-mode-set)
+  (add-hook 'python-mode-hook 'pyenv-mode))
+
 ;; Export to Hugo
 (use-package ox-hugo)
 
@@ -345,6 +364,15 @@
     (interactive)
     (inf-ruby-console-run "bundle exec rails c -- --nomultiline" "rails")))
 
+(use-package ruby-mode
+  :ensure nil
+  :bind (:map ruby-mode-map
+              ("C-c C-c" . ruby-send-buffer)))
+
+(use-package slim-mode)
+
+(use-package rspec-mode)
+
 ;; Terraform
 (use-package terraform-mode)
 (use-package company-terraform
@@ -391,6 +419,8 @@
 
 ;; Install deps-new
 ;; clojure -Ttools install io.github.seancorfield/deps-new '{:git/tag "v0.5.1"}' :as new
+;; check if it's installed
+;; clojure -Ttools list
 (use-package clj-deps-new)
 
 (use-package paredit
