@@ -293,16 +293,21 @@
   :bind (:map python-ts-mode-map
               ("C-c C-t t" . pytest-one)))
 
-(use-package pyenv-mode
+(use-package pyvenv
   :config
-  (defun projectile-pyenv-mode-set ()
-    "Set pyenv version matching project name."
-    (let ((project (projectile-project-name)))
-      (if (member project (pyenv-mode-versions))
-          (pyenv-mode-set project)
-        (pyenv-mode-unset))))
-  (add-hook 'projectile-switch-project-hook 'projectile-pyenv-mode-set)
-  (add-hook 'python-mode-hook 'pyenv-mode))
+  (add-hook 'python-mode-hook 'pyvenv-mode)
+  (add-hook 'python-mode-hook 'pyvenv-tracking-mode))
+
+;; (use-package pyenv-mode
+;;   :config
+;;   (defun projectile-pyenv-mode-set ()
+;;     "Set pyenv version matching project name."
+;;     (let ((project (projectile-project-name)))
+;;       (if (member project (pyenv-mode-versions))
+;;           (pyenv-mode-set project)
+;;         (pyenv-mode-unset))))
+;;   (add-hook 'projectile-switch-project-hook 'projectile-pyenv-mode-set)
+;;   (add-hook 'python-mode-hook 'pyenv-mode))
 
 ;; Export to Hugo
 (use-package ox-hugo)
@@ -334,6 +339,10 @@
 ;; Eglot
 (use-package eglot
   :ensure nil
+  :bind (:map eglot-mode-map
+              ("C-c l a" . eglot-code-actions)
+              ("C-c l r" . eglot-rename)
+              ("C-c l f" . eglot-format))
   :config
   (setq eglot-autoshutdown t
         eglot-stay-out-of '(eldoc)))
@@ -341,9 +350,9 @@
 (use-package consult-eglot)
 
 (with-eval-after-load 'eglot
-  ;; (add-to-list 'eglot-server-programs
-  ;;              '(ruby-mode . ("localhost" 7658))))
+  ;;(add-to-list 'eglot-server-programs '((ruby-mode ruby-ts-mode) . ("localhost" 7658))))
   (add-to-list 'eglot-server-programs '((ruby-mode ruby-ts-mode) . ("bundle" "exec" "solargraph" "stdio"))))
+
 
 ;; Ruby
 (defun my/ruby-set-lsp-config ()
@@ -372,6 +381,10 @@
 (use-package slim-mode)
 
 (use-package rspec-mode)
+
+;; ASDF
+(require 'asdf)
+(asdf-enable)
 
 ;; Terraform
 (use-package terraform-mode)
@@ -438,7 +451,6 @@
 
 ;; Dictionary configuration
 (use-package dictionary
-  :bind (("C-c l" . dictionary-lookup-definition))
   :custom (dictionary-server "dict.org"))
 
 ;; Node
