@@ -249,13 +249,6 @@
 
 (use-package ob-restclient)
 
-;; Start EIN using ONE of the following:
-;; Open an .ipynb file, press C-c C-o, or,
-;; M-x ein:run launches a jupyter process from emacs, or,
-;; M-x ein:login to a running jupyter server
-
-(use-package ein)
-
 ;; Requires mermaid-cli: npm install -g @mermaid-js/mermaid-cli
 (use-package ob-mermaid
   :custom
@@ -276,7 +269,8 @@
    (plantuml . t)
    (python . t)
    (mermaid . t)
-   (shell . t)))
+   (shell . t)
+   (jupyter . t)))
 
 ;; Plantuml
 (use-package plantuml-mode
@@ -293,21 +287,13 @@
   :bind (:map python-ts-mode-map
               ("C-c C-t t" . pytest-one)))
 
+
 (use-package pyvenv
   :config
   (add-hook 'python-mode-hook 'pyvenv-mode)
   (add-hook 'python-mode-hook 'pyvenv-tracking-mode))
 
-;; (use-package pyenv-mode
-;;   :config
-;;   (defun projectile-pyenv-mode-set ()
-;;     "Set pyenv version matching project name."
-;;     (let ((project (projectile-project-name)))
-;;       (if (member project (pyenv-mode-versions))
-;;           (pyenv-mode-set project)
-;;         (pyenv-mode-unset))))
-;;   (add-hook 'projectile-switch-project-hook 'projectile-pyenv-mode-set)
-;;   (add-hook 'python-mode-hook 'pyenv-mode))
+(use-package jupyter)
 
 ;; Export to Hugo
 (use-package ox-hugo)
