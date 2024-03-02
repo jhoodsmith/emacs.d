@@ -1,3 +1,6 @@
 [submodule "copilot.el"]
 	path = copilot.el
 	url = https://github.com/zerolfx/copilot.el
+[submodule "consult-gh"]
+	path = consult-gh
+	url = git@github.com:armindarvish/consult-gh.git
