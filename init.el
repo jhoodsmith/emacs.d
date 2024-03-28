@@ -269,8 +269,7 @@
    (plantuml . t)
    (python . t)
    (mermaid . t)
-   (shell . t)
-   (jupyter . t)))
+   (shell . t)))
 
 ;; Plantuml
 (use-package plantuml-mode
