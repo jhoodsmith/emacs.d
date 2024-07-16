@@ -216,9 +216,9 @@
   (consult-project-root-function 'projectile-project-root))
 
 ;; spelling
-(require 'ispell)
-(when (executable-find ispell-program-name)
-  (add-hook 'prog-mode-hook 'flyspell-prog-mode))
+;; (require 'ispell)
+;; (when (executable-find ispell-program-name)
+;;   (add-hook 'prog-mode-hook 'flyspell-prog-mode))
 
 ;; markdown
 (use-package markdown-mode)
@@ -370,6 +370,7 @@
 ;; ASDF
 (require 'asdf)
 (asdf-enable)
+(setq asdf-binary "/opt/homebrew/opt/asdf/bin/asdf")
 
 ;; Terraform
 (use-package terraform-mode)
@@ -499,6 +500,9 @@
 ;; JSON
 (use-package json-mode)
 
+;; GraphQL
+(use-package graphql-mode)
+
 ;; Typescript
 (use-package typescript-ts-mode
   :hook
@@ -533,5 +537,13 @@
 
 ;; Configure warnings
 (setq-default warning-minimum-level :error)
+
+;; Kubernetes
+
+(use-package kubernetes
+  :commands (kubernetes-overview)
+  :config
+  (setq kubernetes-poll-frequency 3600
+        kubernetes-redraw-frequency 3600))
 
 ;;; init.el ends here
