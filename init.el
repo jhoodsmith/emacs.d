@@ -514,6 +514,18 @@
 ;; Copilot
 (use-package editorconfig)
 
+(use-package consult-gh
+  :load-path (lambda () (expand-file-name "consult-gh" user-emacs-directory))
+  :config
+  ;;add your main GitHub account (replace "armindarvish" with your user or org)
+  (add-to-list 'consult-gh-default-orgs-list "smartpension")
+
+  ;;use "gh org list" to get a list of all your organizations and adds them to default list
+  (setq consult-gh-default-orgs-list (append consult-gh-default-orgs-list (remove "" (split-string (or (consult-gh--command-to-string "org" "list") "") "\n"))))
+
+  ;; set the default folder for cloning repositories, By default Consult-GH will confirm this before cloning
+  (setq consult-gh-default-clone-directory "~/work"))
+
 (use-package copilot
   :load-path (lambda () (expand-file-name "copilot.el" user-emacs-directory))
   :commands (global-copilot-mode)
