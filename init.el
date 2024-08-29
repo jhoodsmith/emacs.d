@@ -254,6 +254,15 @@
   :custom
   (org-mermaid-cli-path "/opt/homebrew/bin/mmdc"))
 
+;; Converting Jupyter notebooks
+(use-package code-cells
+  :custom
+  (code-cells-convert-ipynb-style '(("pandoc" "--to" "ipynb" "--from" "org")
+	                            ("pandoc" "--to" "org" "--from" "ipynb")
+                                    org-mode)))
+;; Go
+(use-package ob-go)
+
 ;; Enable languages for Babel
 (org-babel-do-load-languages
  'org-babel-load-languages
@@ -269,7 +278,9 @@
    (plantuml . t)
    (python . t)
    (mermaid . t)
-   (shell . t)))
+   (shell . t)
+   (ipython . t)
+   (go . t)))
 
 ;; Plantuml
 (use-package plantuml-mode
@@ -292,7 +303,6 @@
   (add-hook 'python-mode-hook 'pyvenv-mode)
   (add-hook 'python-mode-hook 'pyvenv-tracking-mode))
 
-(use-package jupyter)
 
 ;; Export to Hugo
 (use-package ox-hugo)
@@ -459,6 +469,7 @@
   (push '(js-json-mode . json-ts-mode) major-mode-remap-alist)
   (push '(ruby-mode . ruby-ts-mode) major-mode-remap-alist)
   (push '(python-mode . python-ts-mode) major-mode-remap-alist)
+  (push '(go-mode . go-ts-mode) major-mode-remap-alist)
   :custom
   (treesit-language-source-alist
    '((bash "https://github.com/tree-sitter/tree-sitter-bash")
@@ -466,6 +477,7 @@
      (css "https://github.com/tree-sitter/tree-sitter-css")
      (elisp "https://github.com/Wilfred/tree-sitter-elisp")
      (go "https://github.com/tree-sitter/tree-sitter-go")
+     (gomod "https://github.com/camdencheek/tree-sitter-go-mod")
      (html "https://github.com/tree-sitter/tree-sitter-html")
      (javascript "https://github.com/tree-sitter/tree-sitter-javascript" "master" "src")
      (json "https://github.com/tree-sitter/tree-sitter-json")
@@ -481,6 +493,22 @@
 ;; To install all language grammars
 
 ;; (mapc #'treesit-install-language-grammar (mapcar #'car treesit-language-source-alist))
+
+;; Go
+
+(use-package reformatter)
+
+(use-package go-ts-mode
+  :hook
+  (go-ts-mode . go-format-on-save-mode)
+  :config
+  (reformatter-define go-format
+    :program "goimports"
+    :args '("/dev/stdin")))
+
+(use-package go-playground
+  :bind (:map go-playground-mode-map
+              ("C-c C-c" . go-playground-exec)))
 
 ;; HTML
 (use-package sgml-mode
