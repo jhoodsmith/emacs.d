@@ -376,6 +376,7 @@
 (use-package slim-mode)
 
 (use-package rspec-mode)
+(use-package rubocop)
 
 ;; ASDF
 (require 'asdf)
@@ -386,6 +387,8 @@
 (use-package terraform-mode)
 (use-package company-terraform
   :hook (terraform-mode . company-terraform-init))
+
+(use-package ipcalc)
 
 ;; Silver surfer
 (use-package ag)
