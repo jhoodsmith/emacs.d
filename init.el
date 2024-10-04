@@ -215,10 +215,13 @@
   :custom
   (consult-project-root-function 'projectile-project-root))
 
-;; spelling
-;; (require 'ispell)
-;; (when (executable-find ispell-program-name)
-;;   (add-hook 'prog-mode-hook 'flyspell-prog-mode))
+;; brew install aspell
+(use-package flyspell
+  :config
+  (setq ispell-program-name "aspell" ; use aspell instead of ispell
+        ispell-extra-args '("--sug-mode=ultra"))
+  (add-hook 'text-mode-hook #'flyspell-mode)
+  (add-hook 'prog-mode-hook #'flyspell-prog-mode))
 
 ;; markdown
 (use-package markdown-mode)
@@ -263,6 +266,8 @@
 ;; Go
 (use-package ob-go)
 
+(setq-default org-ditaa-jar-path "/opt/homebrew/Cellar/ditaa/0.11.0_1/libexec/ditaa-0.11.0-standalone.jar")
+
 ;; Enable languages for Babel
 (org-babel-do-load-languages
  'org-babel-load-languages
@@ -270,6 +275,7 @@
    (ruby . t)
    (sql . t)
    (R . t)
+   (ditaa . t)
    (dot . t)
    (haskell . t)
    (clojure . t)
@@ -442,6 +448,9 @@
          (cider-repl-mode . paredit-mode))
   :bind (:map paredit-mode-map ("RET" . nil)))
 (provide 'init)
+
+;; kotlin
+(use-package kotlin-mode)
 
 ;; Emacs package for working with Graphviz DOT-format files
 (use-package graphviz-dot-mode
