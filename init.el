@@ -286,6 +286,7 @@
    (mermaid . t)
    (shell . t)
    (ipython . t)
+   (awk . t)
    (go . t)))
 
 ;; Plantuml
@@ -477,7 +478,7 @@
   :init
   (push '(javascript-mode . js-ts-mode) major-mode-remap-alist)
   (push '(js-mode . js-ts-mode) major-mode-remap-alist)
-  (push '(java-mode . java-ts-mode) major-mode-remap-alist)
+  ;; (push '(java-mode . java-ts-mode) major-mode-remap-alist)
   (push '(js-json-mode . json-ts-mode) major-mode-remap-alist)
   (push '(ruby-mode . ruby-ts-mode) major-mode-remap-alist)
   (push '(python-mode . python-ts-mode) major-mode-remap-alist)
