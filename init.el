@@ -1,6 +1,6 @@
 ;;; init.el -- My Emacs configuration  -*- lexical-binding: t -*-
 
-;; Copyright (C) 2023 James Hood-Smith
+;; Copyright (C) 2024 James Hood-Smith
 ;; Author: James Hood-Smith <james@hood-smith.co.uk>
 ;; URL: https://github.com/jhoodsmith/emacs.d
 
@@ -33,7 +33,8 @@
 (setq use-package-always-ensure 't)
 
 ;; Global keybindings
-(global-set-key (kbd "M-3") (lambda () (interactive) (insert "#")))
+(if (eq system-type 'darwin)
+ (global-set-key (kbd "M-3") (lambda () (interactive) (insert "#"))))
 
 ;; Personal configuration
 (setq-default
@@ -82,8 +83,8 @@
 (use-package rainbow-delimiters
   :hook prog-mode)
 
-;; Visual bell
 (defun my/flash-mode-line ()
+  "Visual bell."
   (invert-face 'mode-line)
   (run-with-timer 0.1 nil #'invert-face 'mode-line))
 (setq visible-bell nil ring-bell-function 'my/flash-mode-line)
@@ -113,11 +114,10 @@
   (add-hook 'after-init-hook 'beacon-mode))
 
 ;; Theme
-;; (use-package exotica-theme
-;;   :config (load-theme 'exotica t))
-
-(use-package material-theme
-  :config (load-theme 'material t))
+;; (use-package material-theme
+;;   :config (load-theme 'material t))
+(use-package dracula-theme
+  :config (load-theme 'dracula t))
 
 ;; Diminish
 (use-package diminish)
@@ -247,6 +247,15 @@
               org-capture-templates '(("n" "Note" entry (file "~/org/inbox.org")
                                        "* %?\nEntered on %U\n  %i\n  %a")))
 
+(use-package org-superstar
+  :custom
+  (org-superstar-item-bullet-alist
+   '((?* . ?•)
+     (?+ . ?➤)
+     (?- . ?•)))
+  :config
+  (add-hook 'org-mode-hook (lambda () (org-superstar-mode 1))))
+
 ;; update images in the buffer after I evaluate
 (add-hook 'org-babel-after-execute-hook 'org-display-inline-images)
 
@@ -303,7 +312,6 @@
   :ensure nil
   :bind (:map python-ts-mode-map
               ("C-c C-t t" . pytest-one)))
-
 
 (use-package pyvenv
   :config
@@ -373,7 +381,12 @@
   (defun my/rails-console ()
     "Run a Rails console."
     (interactive)
-    (inf-ruby-console-run "bundle exec rails c -- --nomultiline" "rails")))
+    (inf-ruby-console-run "bundle exec rails c -- --nomultiline" "rails"))
+  
+  (defun my/bundler-console ()
+    "Run a Rails console."
+    (interactive)
+    (inf-ruby-console-run "bin/console" "ruby")))
 
 (use-package ruby-mode
   :ensure nil
@@ -381,7 +394,6 @@
               ("C-c C-c" . ruby-send-buffer)))
 
 (use-package slim-mode)
-
 (use-package rspec-mode)
 (use-package rubocop)
 
@@ -394,8 +406,6 @@
 (use-package terraform-mode)
 (use-package company-terraform
   :hook (terraform-mode . company-terraform-init))
-
-(use-package ipcalc)
 
 ;; Silver surfer
 (use-package ag)
