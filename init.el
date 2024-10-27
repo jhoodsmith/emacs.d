@@ -247,6 +247,7 @@
               org-capture-templates '(("n" "Note" entry (file "~/org/inbox.org")
                                        "* %?\nEntered on %U\n  %i\n  %a")))
 
+;; New version of org-bullets - for making headings and lists look nicer
 (use-package org-superstar
   :custom
   (org-superstar-item-bullet-alist
@@ -272,10 +273,27 @@
   (code-cells-convert-ipynb-style '(("pandoc" "--to" "ipynb" "--from" "org")
 	                            ("pandoc" "--to" "org" "--from" "ipynb")
                                     org-mode)))
-;; Go
 (use-package ob-go)
 
 (setq-default org-ditaa-jar-path "/opt/homebrew/Cellar/ditaa/0.11.0_1/libexec/ditaa-0.11.0-standalone.jar")
+
+;; Org presentations
+(use-package org-tree-slide
+  :bind (:map org-mode-map
+              ("s-p" . org-tree-slide-mode)
+              :map org-tree-slide-mode-map
+              ("<left>" . org-tree-slide-move-previous-tree)
+              ("<right>" . org-tree-slide-move-next-tree))
+  :hook ((org-tree-slide-play . (lambda ()
+                                  (text-scale-increase 2)
+                                  (org-display-inline-images)
+                                  (read-only-mode 1)))
+         (org-tree-slide-stop . (lambda ()
+                                  (text-scale-increase 0)
+                                  (org-remove-inline-images)
+                                  (read-only-mode -1))))
+  :custom
+  (org-tree-slide-header nil))
 
 ;; Enable languages for Babel
 (org-babel-do-load-languages
@@ -589,14 +607,8 @@
   (text-mode . copilot-mode)
   (prog-mode . copilot-mode))
 
-;; Org-AI
-(use-package org-ai
-  :commands (org-ai-mode org-ai-global-mode)
-  :init
-  (add-hook 'org-mode-hook #'org-ai-mode)
-  (org-ai-global-mode)
-  :config
-  (org-ai-install-yasnippets))
+(use-package gptel
+  :bind ("C-c RET" . gptel-send))
 
 ;; Configure warnings
 (setq-default warning-minimum-level :error)
