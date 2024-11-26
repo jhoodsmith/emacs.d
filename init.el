@@ -298,22 +298,23 @@
 ;; Enable languages for Babel
 (org-babel-do-load-languages
  'org-babel-load-languages
- '((emacs-lisp . t)
-   (ruby . t)
-   (sql . t)
-   (R . t)
+ '((R . t)
+   (awk . t)
+   (clojure . t)
    (ditaa . t)
    (dot . t)
+   (emacs-lisp . t)
+   (go . t)
    (haskell . t)
-   (clojure . t)
-   (restclient . t)
    (java . t)
+   (latex . t)
+   (mermaid . t)
    (plantuml . t)
    (python . t)
-   (mermaid . t)
+   (restclient . t)
+   (ruby . t)
    (shell . t)
-   (awk . t)
-   (go . t)))
+   (sql . t)))
 
 ;; Plantuml
 (use-package plantuml-mode
@@ -595,7 +596,9 @@
   (prog-mode . copilot-mode))
 
 (use-package gptel
-  :bind ("C-c RET" . gptel-send))
+  :bind ("C-c g" . gptel-menu)
+  :custom
+  (gptel-default-mode 'org-mode))
 
 ;; Configure warnings
 (setq-default warning-minimum-level :error)
