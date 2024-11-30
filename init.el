@@ -506,7 +506,7 @@
   :init
   (push '(javascript-mode . js-ts-mode) major-mode-remap-alist)
   (push '(js-mode . js-ts-mode) major-mode-remap-alist)
-  ;; (push '(java-mode . java-ts-mode) major-mode-remap-alist)
+  (push '(java-mode . java-ts-mode) major-mode-remap-alist)
   (push '(js-json-mode . json-ts-mode) major-mode-remap-alist)
   (push '(ruby-mode . ruby-ts-mode) major-mode-remap-alist)
   (push '(python-mode . python-ts-mode) major-mode-remap-alist)
@@ -533,7 +533,10 @@
 
 ;; To install all language grammars
 
-;; (mapc #'treesit-install-language-grammar (mapcar #'car treesit-language-source-alist))
+;; (mapc #'treesit-install-language-grammar (mapcar #'car
+;; treesit-language-source-alist)) Although you might have to download them
+;; manually: Clone https://github.com/casouri/tree-sitter-module, run
+;; ./batch.sh, then do mv dist/* ~/.config/emacs/tree-sitter
 
 ;; Go
 
@@ -597,8 +600,11 @@
 
 (use-package gptel
   :bind ("C-c g" . gptel-menu)
-  :custom
-  (gptel-default-mode 'org-mode))
+  :config
+  (defvar gptel-backend-anthropic
+    "Anthropic - currently not used"
+    (gptel-make-anthropic "Claude" :key (auth-source-pick-first-password :host "api.anthropic.com")))
+  (setq gptel-default-mode 'org-mode))
 
 ;; Configure warnings
 (setq-default warning-minimum-level :error)
