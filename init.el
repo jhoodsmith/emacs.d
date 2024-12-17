@@ -599,12 +599,12 @@
   (prog-mode . copilot-mode))
 
 (use-package gptel
-  :bind ("C-c g" . gptel-menu)
+  :bind ("C-c g" . gptel-send)
   :config
   (defvar gptel-backend-anthropic
-    "Anthropic - currently not used"
     (gptel-make-anthropic "Claude" :key (auth-source-pick-first-password :host "api.anthropic.com")))
-  (setq gptel-default-mode 'org-mode))
+  (setq gptel-default-mode 'org-mode
+        gptel-backend gptel-backend-anthropic))
 
 ;; Configure warnings
 (setq-default warning-minimum-level :error)
