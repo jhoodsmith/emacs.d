@@ -465,7 +465,7 @@
 (use-package cider)
 
 ;; Install deps-new
-;; clojure -Ttools install io.github.seancorfield/deps-new '{:git/tag "v0.5.1"}' :as new
+;; clojure -Ttools install-latest :lib io.github.seancorfield/deps-new :as new
 ;; check if it's installed
 ;; clojure -Ttools list
 (use-package clj-deps-new)
