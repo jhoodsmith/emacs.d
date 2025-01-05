@@ -373,6 +373,7 @@
               ("C-c l f" . eglot-format))
   :config
   (setq eglot-autoshutdown t
+        eglot-events-buffer-size 0
         eglot-stay-out-of '(eldoc)))
 
 (use-package consult-eglot)
@@ -580,6 +581,7 @@
   :hook
   (tsx-ts-mode . sgml-electric-tag-pair-mode)
   :mode
+  ((rx ".mjs" eos) . typescript-ts-mode)
   ((rx ".ts" eos) . typescript-ts-mode)
   ((rx ".tsx" eos) . tsx-ts-mode))
 
