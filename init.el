@@ -281,6 +281,7 @@
 (use-package org-tree-slide
   :bind (:map org-mode-map
               ("s-p" . org-tree-slide-mode)
+              ("s-<return>" . org-insert-item)
               :map org-tree-slide-mode-map
               ("<left>" . org-tree-slide-move-previous-tree)
               ("<right>" . org-tree-slide-move-next-tree))
