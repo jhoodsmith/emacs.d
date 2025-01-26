@@ -381,7 +381,12 @@
 
 (with-eval-after-load 'eglot
   ;;(add-to-list 'eglot-server-programs '((ruby-mode ruby-ts-mode) . ("localhost" 7658))))
-  (add-to-list 'eglot-server-programs '((ruby-mode ruby-ts-mode) . ("bundle" "exec" "solargraph" "stdio"))))
+  (add-to-list 'eglot-server-programs '((ruby-mode ruby-ts-mode) . ("bundle" "exec" "solargraph" "stdio")))
+  (add-to-list 'eglot-server-programs
+                       `((rust-mode rust-ts-mode) . ("rust-analyzer" :initializationOptions
+                                                     ( :procMacro (:enable t)
+                                                       :cargo ( :buildScripts (:enable t)
+                                                                :features "all"))))))
 
 
 ;; Ruby
@@ -555,6 +560,14 @@
 (use-package go-playground
   :bind (:map go-playground-mode-map
               ("C-c C-c" . go-playground-exec)))
+
+;; Rust
+;; brew install rust rust-analyzer
+;; cargo new hello_world --bin
+(use-package rust-mode
+  :init
+  (setq rust-mode-treesitter-derive t))
+
 
 ;; HTML
 (use-package sgml-mode
