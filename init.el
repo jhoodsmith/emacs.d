@@ -66,6 +66,10 @@
   :config
   (exec-path-from-shell-initialize))
 
+;; Dictionary
+(use-package osx-dictionary)
+
+
 ;; Switch Window
 (use-package switch-window
   :config
@@ -262,6 +266,8 @@
 
 (use-package ob-restclient)
 
+(use-package mermaid-mode)
+
 ;; Requires mermaid-cli: npm install -g @mermaid-js/mermaid-cli
 (use-package ob-mermaid
   :custom
@@ -296,6 +302,8 @@
   :custom
   (org-tree-slide-header nil))
 
+(use-package gnuplot)
+
 ;; Enable languages for Babel
 (org-babel-do-load-languages
  'org-babel-load-languages
@@ -305,6 +313,7 @@
    (ditaa . t)
    (dot . t)
    (emacs-lisp . t)
+   (gnuplot . t)
    (go . t)
    (haskell . t)
    (java . t)
@@ -493,10 +502,6 @@
   :config
   (setq graphviz-dot-indent-width 4))
 
-;; Dictionary configuration
-(use-package dictionary
-  :custom (dictionary-server "dict.org"))
-
 ;; Node
 (use-package nodejs-repl
   :bind (:map js-mode-map
@@ -600,27 +605,34 @@
   ((rx ".tsx" eos) . tsx-ts-mode))
 
 ;; Copilot
-(use-package editorconfig)
+;; (use-package editorconfig)
 
-(use-package copilot
-  :load-path (lambda () (expand-file-name "copilot.el" user-emacs-directory))
-  :commands (global-copilot-mode)
-  :diminish
-  :bind (:map copilot-mode-map
-         ("M-n" . copilot-next-completion)
-         ("M-p" . copilot-previous-completion)
-         ("M-<return>" . copilot-accept-completion))
-  :hook
-  (text-mode . copilot-mode)
-  (prog-mode . copilot-mode))
+;; (use-package copilot
+;;   :load-path (lambda () (expand-file-name "copilot.el" user-emacs-directory))
+;;   :commands (global-copilot-mode)
+;;   :diminish
+;;   :bind (:map copilot-mode-map
+;;          ("M-n" . copilot-next-completion)
+;;          ("M-p" . copilot-previous-completion)
+;;          ("M-<return>" . copilot-accept-completion))
+;;   :hook
+;;   (text-mode . copilot-mode)
+;;   (prog-mode . copilot-mode))
 
 (use-package gptel
   :bind ("C-c g" . gptel-send)
   :config
   (defvar gptel-backend-anthropic
     (gptel-make-anthropic "Claude" :key (auth-source-pick-first-password :host "api.anthropic.com")))
+  (setf (alist-get 'default gptel-directives) "You are a large language model living in Emacs and a helpful assistant. Respond concisely. Put any mathematical expression or equation within a latex fragment so that it can be previewed in org mode.")
   (setq gptel-default-mode 'org-mode
         gptel-backend gptel-backend-anthropic))
+
+;; gptel
+(require 'gptel-quick)
+
+(use-package kubernetes)
+
 
 ;; Configure warnings
 (setq-default warning-minimum-level :error)
