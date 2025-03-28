@@ -1,6 +1,6 @@
 ;;; init.el -- My Emacs configuration  -*- lexical-binding: t -*-
 
-;; Copyright (C) 2024 James Hood-Smith
+;; Copyright (C) 2025 James Hood-Smith
 ;; Author: James Hood-Smith <james@hood-smith.co.uk>
 ;; URL: https://github.com/jhoodsmith/emacs.d
 
@@ -52,6 +52,11 @@
  auto-save-default nil
  make-backup-files nil
  truncate-lines nil)
+
+;; Elisp Demos
+(use-package elisp-demos
+  :config
+  (advice-add 'describe-function-1 :after #'elisp-demos-advice-describe-function-1))
 
 ;; Don't disable case-change functions
 (put 'upcase-region 'disabled nil)
