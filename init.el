@@ -276,7 +276,7 @@
 ;; Requires mermaid-cli: npm install -g @mermaid-js/mermaid-cli
 (use-package ob-mermaid
   :custom
-  (org-mermaid-cli-path "/opt/homebrew/bin/mmdc"))
+  (ob-mermaid-cli-path "~/.asdf/shims/mmdc"))
 
 ;; Converting Jupyter notebooks
 (use-package code-cells
