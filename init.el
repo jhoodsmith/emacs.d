@@ -34,7 +34,7 @@
 
 ;; Global keybindings
 (if (eq system-type 'darwin)
- (global-set-key (kbd "M-3") (lambda () (interactive) (insert "#"))))
+    (global-set-key (kbd "M-3") (lambda () (interactive) (insert "#"))))
 
 ;; Personal configuration
 (setq-default
@@ -397,20 +397,20 @@
   ;;(add-to-list 'eglot-server-programs '((ruby-mode ruby-ts-mode) . ("localhost" 7658))))
   (add-to-list 'eglot-server-programs '((ruby-mode ruby-ts-mode) . ("bundle" "exec" "solargraph" "stdio")))
   (add-to-list 'eglot-server-programs
-                       `((rust-mode rust-ts-mode) . ("rust-analyzer" :initializationOptions
-                                                     ( :procMacro (:enable t)
-                                                       :cargo ( :buildScripts (:enable t)
-                                                                :features "all"))))))
+               `((rust-mode rust-ts-mode) . ("rust-analyzer" :initializationOptions
+                                             ( :procMacro (:enable t)
+                                               :cargo ( :buildScripts (:enable t)
+                                                        :features "all"))))))
 
 
 ;; Ruby
 (defun my/ruby-set-lsp-config ()
   "Load LSP config from solargraph.json."
   (setq-default eglot-workspace-configuration
-              (let* ((config-file (file-name-concat user-emacs-directory "lsp-config" "solargraph.json")))
-                (with-temp-buffer
-                  (insert-file-contents config-file)
-                  (json-parse-buffer :object-type 'plist :false-object :json-false)))))
+                (let* ((config-file (file-name-concat user-emacs-directory "lsp-config" "solargraph.json")))
+                  (with-temp-buffer
+                    (insert-file-contents config-file)
+                    (json-parse-buffer :object-type 'plist :false-object :json-false)))))
 
 (add-hook 'ruby-mode-hook #'my/ruby-set-lsp-config)
 (add-hook 'ruby-ts-mode-hook #'my/ruby-set-lsp-config)
@@ -510,8 +510,8 @@
 ;; Node
 (use-package nodejs-repl
   :bind (:map js-mode-map
-         ("C-x C-e" . nodejs-repl-send-last-expression)
-         ("C-c C-r" . nodejs-repl-send-region)))
+              ("C-x C-e" . nodejs-repl-send-last-expression)
+              ("C-c C-r" . nodejs-repl-send-region)))
 
 ;; Tree sitter
 ;; brew install tree-sitter
@@ -624,6 +624,22 @@
 ;;   (text-mode . copilot-mode)
 ;;   (prog-mode . copilot-mode))
 
+(defun my/get-historical-weather (latitude longitude timestamp)
+  "Get historical weather from openweathermap.org with metric units.
+Arguments:
+  LATITUDE: latitude coordinate of the location
+  LONGITUDE: longitude coordinate of the location
+  TIMESTAMP: Unix timestamp for the historical data."
+  (let* ((url-request-method "GET")
+         (api-key (auth-source-pick-first-password :host "api.openweathermap.org"))
+         (url (format "https://api.openweathermap.org/data/3.0/onecall/timemachine?units=metric&lat=%s&lon=%s&dt=%s&appid=%s"
+                      latitude longitude timestamp api-key)))
+    (with-current-buffer (url-retrieve-synchronously url)
+      (goto-char (point-min))
+      (re-search-forward "^$")
+      (delete-region (point-min) (point))
+      (buffer-string))))
+
 (use-package gptel
   :bind ("C-c g" . gptel-send)
   :config
@@ -631,7 +647,113 @@
     (gptel-make-anthropic "Claude" :key (auth-source-pick-first-password :host "api.anthropic.com")))
   (setf (alist-get 'default gptel-directives) "You are a large language model living in Emacs and a helpful assistant. Respond concisely. Put any mathematical expression or equation within a latex fragment so that it can be previewed in org mode.")
   (setq gptel-default-mode 'org-mode
-        gptel-backend gptel-backend-anthropic))
+        gptel-backend gptel-backend-anthropic)
+
+  ;; gptel tool for reading file
+  (gptel-make-tool
+   :name "read_buffer"                    ; javascript-style snake_case name
+   :function (lambda (buffer)                  ; the function that will run
+               (unless (buffer-live-p (get-buffer buffer))
+                 (error "error: buffer %s is not live." buffer))
+               (with-current-buffer  buffer
+                 (buffer-substring-no-properties (point-min) (point-max))))
+   :description "return the contents of an emacs buffer"
+   :args (list '(:name "buffer"
+                       :type string            ; :type value must be a symbol
+                       :description "the name of the buffer whose contents are to be retrieved"))
+   :category "filesystem")                     ; An arbitrary label for grouping
+
+  ;; gptel tool for creating a text file
+  (gptel-make-tool
+   :name "create_file"
+   :function (lambda (path filename content)
+               (let ((full-path (expand-file-name filename path)))
+                 (with-temp-buffer
+                   (insert content)
+                   (write-file full-path))
+                 (format "Created file %s in %s" filename path)))
+   :description "Create a new file with the specified content"
+   :args (list '(:name "path"
+	               :type string
+	               :description "The directory where to create the file")
+               '(:name "filename"
+	               :type string
+	               :description "The name of the file to create")
+               '(:name "content"
+	               :type string
+	               :description "The content to write to the file"))
+   :category "filesystem")
+
+  ;; gptel tool for getting current time
+  (gptel-make-tool
+   :name "current_time"
+   :function (lambda () (format-time-string "%Y-%m-%d %H:%M:%S"))
+   :description "Returns current time in the format %Y-%m-%d %H:%M:%S"
+   :category "general")
+
+  ;; gptel tool for getting historical weather data
+  (gptel-make-tool
+   :name "get_historical_weather"
+   :function (lambda (latitude longitude timestamp)
+               (my/get-historical-weather latitude longitude timestamp))
+   :description "Get historical weather data from OpenWeatherMap API. All units of measurement in the response are metric."
+   :args (list '(:name "latitude"
+                       :type string
+                       :description "Latitude coordinate of the location")
+               '(:name "longitude"
+                       :type string
+                       :description "Longitude coordinate of the location")
+               '(:name "timestamp"
+                       :type string
+                       :description "Unix timestamp for the historical data"))
+   :category "weather")
+
+
+  ;; gptel tool for listing directory contents
+  (gptel-make-tool
+   :name "list_directory"
+   :function (lambda (directory &optional match full)
+               (let* ((dir (expand-file-name directory))
+                      (files (directory-files dir full match)))
+                 (mapconcat #'identity files "\n")))
+   :description "List the contents of a directory"
+   :args (list '(:name "directory"
+                       :type string
+                       :description "The directory to list")
+               '(:name "match"
+                       :type string
+                       :description "Optional regex pattern to filter files"
+                       :optional t)
+               '(:name "full"
+                       :type boolean
+                       :description "Whether to return full pathnames"
+                       :optional t))
+   :category "filesystem")
+
+
+  ;; gptel tool for reading from a file
+  (gptel-make-tool
+   :name "read_file"
+   :function (lambda (filepath &optional max-chars)
+               (let ((path (expand-file-name filepath)))
+                 (if (file-readable-p path)
+                     (with-temp-buffer
+                       (insert-file-contents path)
+                       (if max-chars
+                           (buffer-substring-no-properties
+                            (point-min)
+                            (min (point-max) (+ (point-min) max-chars)))
+                         (buffer-string)))
+                   (format "Error: Cannot read file %s" filepath))))
+   :description "Read the contents of a text file"
+   :args (list '(:name "filepath"
+                       :type string
+                       :description "Path to the file to read")
+               '(:name "max-chars"
+                       :type integer
+                       :description "Optional maximum number of characters to read"
+                       :optional t))
+   :category "filesystem"))
 
 ;; gptel
 (require 'gptel-quick)
