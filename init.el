@@ -69,6 +69,9 @@
 (use-package exec-path-from-shell
   :if (memq window-system '(mac ns))
   :config
+  (setq exec-path-from-shell-shell-name "/bin/zsh")
+  (setq exec-path-from-shell-variables
+        (append exec-path-from-shell-variables '("NODE_EXTRA_CA_CERTS" "GOCARDLESS_ACCESS_TOKEN" "DIGITALOCEAN_ACCESS_TOKEN" "JWT_SECRET_KEY")))
   (exec-path-from-shell-initialize))
 
 ;; Dictionary
@@ -197,6 +200,36 @@
   :config
   (projectile-rails-global-mode))
 
+(use-package all-the-icons
+  :if (display-graphic-p))
+
+(use-package treemacs
+  :bind
+  (:map global-map
+        ("M-0"       . treemacs-select-window)
+        ("C-x t 1"   . treemacs-delete-other-windows)
+        ("C-x t t"   . treemacs)
+        ("C-x t d"   . treemacs-select-directory)
+        ("C-x t B"   . treemacs-bookmark)
+        ("C-x t C-t" . treemacs-find-file)
+        ("C-x t M-t" . treemacs-find-tag))
+  :config
+  (treemacs-follow-mode t)
+  (treemacs-filewatch-mode t))
+
+;; Optional but recommended packages
+(use-package treemacs-projectile
+  :after (treemacs projectile))
+
+(use-package treemacs-magit
+  :after (treemacs magit))
+
+;; Icons for treemacs (optional but nice)
+(use-package treemacs-all-the-icons
+  :after treemacs
+  :config
+  (treemacs-load-theme "all-the-icons"))
+
 ;; Vertical display in minibuffer
 (use-package vertico
   :init
@@ -255,16 +288,31 @@
               org-agenda-files (directory-files-recursively "~/org" "\\.org$")
               org-capture-templates '(("n" "Note" entry (file "~/org/inbox.org")
                                        "* %?\nEntered on %U\n  %i\n  %a")))
-
-;; New version of org-bullets - for making headings and lists look nicer
-(use-package org-superstar
+(use-package org-modern
+  :hook
+  (org-mode . org-modern-mode)
+  (org-agenda-finalize . org-modern-agenda)
   :custom
-  (org-superstar-item-bullet-alist
-   '((?* . ?•)
-     (?+ . ?➤)
-     (?- . ?•)))
+  ;; Edit these settings after trying the defaults
+  (org-modern-star '("◉" "○" "●" "○" "●" "○" "●"))
+  (org-modern-list '((43 . "➤") (45 . "–") (42 . "•")))
+  (org-modern-tag nil)
+  (org-modern-priority nil)
+  (org-modern-todo nil)
+  (org-modern-table t)
+  ;; Fixes
+  (org-modern-block-fringe nil)
+  (org-modern-block-name nil)
+  (org-modern-horizontal-rule nil)
   :config
-  (add-hook 'org-mode-hook (lambda () (org-superstar-mode 1))))
+  ;; Choose which elements to prettify
+  (setq org-modern-hide-stars nil)  ;; Keep the asterisks visible
+  
+  ;; Optional: add some padding in org-mode buffers
+  (add-hook 'org-mode-hook #'(lambda ()
+                              (setq left-margin-width 2)
+                              (setq right-margin-width 2)
+                              (set-window-buffer nil (current-buffer)))))
 
 ;; update images in the buffer after I evaluate
 (add-hook 'org-babel-after-execute-hook 'org-display-inline-images)
@@ -640,49 +688,38 @@ Arguments:
       (delete-region (point-min) (point))
       (buffer-string))))
 
+(use-package mcp
+  :load-path "mcp.el/"
+  :config (require 'mcp-hub)
+  :custom
+  (mcp-hub-servers '(("github"
+                      :command "github-mcp-server"
+                      :args ("stdio")
+                      :env (:GITHUB_PERSONAL_ACCESS_TOKEN (auth-source-pick-first-password :host "api.github.com")))
+                     ("filesystem"
+                      :command "mcp-filesystem-server"
+                      :args ("/Users/james.hood-smith/work/smart-kafka-pipes/")))))
+
+
 (use-package gptel
-  :bind ("C-c g" . gptel-send)
+  :bind (("C-c g s" . gptel-send)
+         ("C-c g a" . gptel-add)
+         ("C-c g m" . gptel-menu)
+         ("C-c g g" . gptel)
+         ("C-c g r" . gptel-context-remove-all))
   :config
+  (require 'gptel-integrations)
   (defvar gptel-backend-anthropic
-    (gptel-make-anthropic "Claude" :key (auth-source-pick-first-password :host "api.anthropic.com")))
+    (gptel-make-anthropic "Claude"
+      :key (auth-source-pick-first-password :host "api.anthropic.com")))
+  (defvar gptel-backend-openai
+    (gptel-make-openai "ChatGPT"
+      :stream t
+      :models gptel--openai-models
+      :key (auth-source-pick-first-password :host "api.openai.com")))
   (setf (alist-get 'default gptel-directives) "You are a large language model living in Emacs and a helpful assistant. Respond concisely. Put any mathematical expression or equation within a latex fragment so that it can be previewed in org mode.")
   (setq gptel-default-mode 'org-mode
         gptel-backend gptel-backend-anthropic)
-
-  ;; gptel tool for reading file
-  (gptel-make-tool
-   :name "read_buffer"                    ; javascript-style snake_case name
-   :function (lambda (buffer)                  ; the function that will run
-               (unless (buffer-live-p (get-buffer buffer))
-                 (error "error: buffer %s is not live." buffer))
-               (with-current-buffer  buffer
-                 (buffer-substring-no-properties (point-min) (point-max))))
-   :description "return the contents of an emacs buffer"
-   :args (list '(:name "buffer"
-                       :type string            ; :type value must be a symbol
-                       :description "the name of the buffer whose contents are to be retrieved"))
-   :category "filesystem")                     ; An arbitrary label for grouping
-
-  ;; gptel tool for creating a text file
-  (gptel-make-tool
-   :name "create_file"
-   :function (lambda (path filename content)
-               (let ((full-path (expand-file-name filename path)))
-                 (with-temp-buffer
-                   (insert content)
-                   (write-file full-path))
-                 (format "Created file %s in %s" filename path)))
-   :description "Create a new file with the specified content"
-   :args (list '(:name "path"
-	               :type string
-	               :description "The directory where to create the file")
-               '(:name "filename"
-	               :type string
-	               :description "The name of the file to create")
-               '(:name "content"
-	               :type string
-	               :description "The content to write to the file"))
-   :category "filesystem")
 
   ;; gptel tool for getting current time
   (gptel-make-tool
@@ -708,10 +745,30 @@ Arguments:
                        :description "Unix timestamp for the historical data"))
    :category "weather")
 
+  ;; gptel tool for creating a text file
+  (gptel-make-tool
+   :name "my_create_file"
+   :function (lambda (path filename content)
+               (let ((full-path (expand-file-name filename path)))
+                 (with-temp-buffer
+                   (insert content)
+                   (write-file full-path))
+                 (format "Created file %s in %s" filename path)))
+   :description "Create a new file with the specified content"
+   :args (list '(:name "path"
+	               :type string
+	               :description "The directory where to create the file")
+               '(:name "filename"
+	               :type string
+	               :description "The name of the file to create")
+               '(:name "content"
+	               :type string
+	               :description "The content to write to the file"))
+   :category "filesystem")  
 
   ;; gptel tool for listing directory contents
   (gptel-make-tool
-   :name "list_directory"
+   :name "my_list_directory"
    :function (lambda (directory &optional match full)
                (let* ((dir (expand-file-name directory))
                       (files (directory-files dir full match)))
@@ -733,7 +790,7 @@ Arguments:
 
   ;; gptel tool for reading from a file
   (gptel-make-tool
-   :name "read_file"
+   :name "my_read_file"
    :function (lambda (filepath &optional max-chars)
                (let ((path (expand-file-name filepath)))
                  (if (file-readable-p path)
@@ -753,13 +810,42 @@ Arguments:
                        :type integer
                        :description "Optional maximum number of characters to read"
                        :optional t))
+   :category "filesystem")
+
+  ;; gptel tool for updating an existing file
+  (gptel-make-tool
+   :name "my_update_file"
+   :function (lambda (filepath content &optional append)
+               (let ((path (expand-file-name filepath)))
+                 (if (file-exists-p path)
+                     (with-temp-buffer
+                       (when append
+                         (insert-file-contents path))
+                       (if append
+                           (goto-char (point-max))
+                         (erase-buffer))
+                       (insert content)
+                       (write-file path)
+                       (format "Updated file %s successfully" filepath))
+                   (format "Error: File %s does not exist" filepath))))
+   :description "Update the contents of an existing file"
+   :args (list '(:name "filepath"
+                       :type string
+                       :description "Path to the file to update")
+               '(:name "content"
+                       :type string
+                       :description "The content to write to the file")
+               '(:name "append"
+                       :type boolean
+                       :description "Whether to append to the file instead of replacing content"
+                       :optional t))
    :category "filesystem"))
 
-;; gptel
-(require 'gptel-quick)
+;; claude code
+;; (package-vc-install '(claude-code :url "https://github.com/stevemolitor/claude-code.el"))
+(require 'claude-code)
 
 (use-package kubernetes)
-
 
 ;; Configure warnings
 (setq-default warning-minimum-level :error)
