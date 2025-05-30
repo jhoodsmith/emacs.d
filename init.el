@@ -692,10 +692,10 @@ Arguments:
   :load-path "mcp.el/"
   :config (require 'mcp-hub)
   :custom
-  (mcp-hub-servers '(("github"
+  (mcp-hub-servers `(("github"
                       :command "github-mcp-server"
                       :args ("stdio")
-                      :env (:GITHUB_PERSONAL_ACCESS_TOKEN (auth-source-pick-first-password :host "api.github.com")))
+                      :env (:GITHUB_PERSONAL_ACCESS_TOKEN ,(auth-source-pick-first-password :host "api.github.com")))
                      ("filesystem"
                       :command "mcp-filesystem-server"
                       :args ("/Users/james.hood-smith/work")))))
