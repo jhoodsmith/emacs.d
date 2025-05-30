@@ -71,7 +71,7 @@
   :config
   (setq exec-path-from-shell-shell-name "/bin/zsh")
   (setq exec-path-from-shell-variables
-        (append exec-path-from-shell-variables '("NODE_EXTRA_CA_CERTS" "GOCARDLESS_ACCESS_TOKEN" "DIGITALOCEAN_ACCESS_TOKEN" "JWT_SECRET_KEY")))
+        (append exec-path-from-shell-variables '("NODE_EXTRA_CA_CERTS" "GOCARDLESS_ACCESS_TOKEN" "DIGITALOCEAN_ACCESS_TOKEN" "JWT_SECRET_KEY" "GITHUB_PERSONAL_ACCESS_TOKEN")))
   (exec-path-from-shell-initialize))
 
 ;; Dictionary
@@ -698,8 +698,7 @@ Arguments:
                       :env (:GITHUB_PERSONAL_ACCESS_TOKEN (auth-source-pick-first-password :host "api.github.com")))
                      ("filesystem"
                       :command "mcp-filesystem-server"
-                      :args ("/Users/james.hood-smith/work/smart-kafka-pipes/")))))
-
+                      :args ("/Users/james.hood-smith/work")))))
 
 (use-package gptel
   :bind (("C-c g s" . gptel-send)
@@ -709,17 +708,25 @@ Arguments:
          ("C-c g r" . gptel-context-remove-all))
   :config
   (require 'gptel-integrations)
+
+  (defvar gptel-backend-gh
+    (gptel-make-gh-copilot "Copilot"))
+
   (defvar gptel-backend-anthropic
     (gptel-make-anthropic "Claude"
       :key (auth-source-pick-first-password :host "api.anthropic.com")))
+
   (defvar gptel-backend-openai
     (gptel-make-openai "ChatGPT"
       :stream t
       :models gptel--openai-models
       :key (auth-source-pick-first-password :host "api.openai.com")))
+
   (setf (alist-get 'default gptel-directives) "You are a large language model living in Emacs and a helpful assistant. Respond concisely. Put any mathematical expression or equation within a latex fragment so that it can be previewed in org mode.")
+
   (setq gptel-default-mode 'org-mode
-        gptel-backend gptel-backend-anthropic)
+        gptel-model 'claude-3.7-sonnet
+        gptel-backend gptel-backend-gh)
 
   ;; gptel tool for getting current time
   (gptel-make-tool
