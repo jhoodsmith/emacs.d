@@ -705,6 +705,7 @@ Arguments:
          ("C-c g a" . gptel-add)
          ("C-c g m" . gptel-menu)
          ("C-c g g" . gptel)
+         ("C-c g w" . gptel-rewrite)
          ("C-c g r" . gptel-context-remove-all))
   :config
   (require 'gptel-integrations)
