@@ -71,7 +71,7 @@
   :config
   (setq exec-path-from-shell-shell-name "/bin/zsh")
   (setq exec-path-from-shell-variables
-        (append exec-path-from-shell-variables '("NODE_EXTRA_CA_CERTS" "GOCARDLESS_ACCESS_TOKEN" "DIGITALOCEAN_ACCESS_TOKEN" "JWT_SECRET_KEY" "GITHUB_PERSONAL_ACCESS_TOKEN")))
+        (append exec-path-from-shell-variables '("NODE_EXTRA_CA_CERTS" "DIGITALOCEAN_ACCESS_TOKEN")))
   (exec-path-from-shell-initialize))
 
 ;; Dictionary
@@ -310,9 +310,9 @@
   
   ;; Optional: add some padding in org-mode buffers
   (add-hook 'org-mode-hook #'(lambda ()
-                              (setq left-margin-width 2)
-                              (setq right-margin-width 2)
-                              (set-window-buffer nil (current-buffer)))))
+                               (setq left-margin-width 2)
+                               (setq right-margin-width 2)
+                               (set-window-buffer nil (current-buffer)))))
 
 ;; update images in the buffer after I evaluate
 (add-hook 'org-babel-after-execute-hook 'org-display-inline-images)
@@ -696,9 +696,16 @@ Arguments:
                       :command "github-mcp-server"
                       :args ("stdio")
                       :env (:GITHUB_PERSONAL_ACCESS_TOKEN ,(auth-source-pick-first-password :host "api.github.com")))
+                     ("figma"
+                      :command "npx"
+                      :args ("-y" "figma-developer-mcp" "--stdio" ,(concat "--figma-api-key=" (auth-source-pick-first-password :host "api.figma.com"))))
+                     ("aws-documentation-mcp-server"
+                      :command "uvx"
+                      :args ("awslabs.aws-documentation-mcp-server@latest")
+                      :env (:FASTMCP_LOG_LEVEL "ERROR" :AWS_DOCUMENTATION_PARTITION "aws"))
                      ("filesystem"
                       :command "mcp-filesystem-server"
-                      :args ("/Users/james.hood-smith/work")))))
+                      :args ("/Users/james.hood-smith/work" "/Users/james.hood-smith/scratch")))))
 
 (use-package gptel
   :bind (("C-c g s" . gptel-send)
@@ -709,6 +716,10 @@ Arguments:
          ("C-c g r" . gptel-context-remove-all))
   :config
   (require 'gptel-integrations)
+
+  (defvar gptel-backend-bedrock
+    (gptel-make-bedrock "Bedrock"
+      :region "eu-west-2"))
 
   (defvar gptel-backend-gh
     (gptel-make-gh-copilot "Copilot"))
@@ -726,8 +737,38 @@ Arguments:
   (setf (alist-get 'default gptel-directives) "You are a large language model living in Emacs and a helpful assistant. Respond concisely. Put any mathematical expression or equation within a latex fragment so that it can be previewed in org mode.")
 
   (setq gptel-default-mode 'org-mode
+        ;; gptel-log-level 'info
         gptel-model 'claude-3.7-sonnet
         gptel-backend gptel-backend-gh)
+
+  (gptel-make-tool
+   :name "my_run_command"
+   :function (lambda (command)
+               (let* ((project-root (projectile-project-root))
+                      ;; Map command prefixes to their environment runners
+                      (command-env-map '(("pytest" . "uv run")
+                                         ("ruff" . "uv run")
+                                         ("mypy" . "uv run")
+                                         ("rspec" . "bundle exec")
+                                         ("rubocop" . "bundle exec")))
+                      (cmd-name (car (split-string command)))
+                      (cmd-entry (assoc cmd-name command-env-map)))
+                 (if cmd-entry
+                     (let* ((default-directory project-root)
+                            (env-prefix (cdr cmd-entry))
+                            (full-command (format "%s %s" env-prefix command)))
+                       (with-temp-buffer
+                         (let ((exit-code (call-process-shell-command full-command nil t nil)))
+                           (let ((output (buffer-string)))
+                             (format "Command: %s\nExit code: %d\nOutput:\n%s" 
+                                     full-command exit-code output)))))
+                   (format "Error: Command '%s' is not in the whitelist. Allowed commands: %s" 
+                           cmd-name (mapconcat #'car command-env-map ", ")))))
+   :description "Run whitelisted development commands from the project root. Python commands run with uv run, Ruby commands with bundle exec."
+   :args (list '(:name "command"
+                       :type string
+                       :description "The command to run. Available commands: pytest, ruff, mypy (Python); rspec, rubocop (Ruby). Arguments can be added after the command."))
+   :category "development")
 
   ;; gptel tool for getting current time
   (gptel-make-tool
@@ -753,38 +794,39 @@ Arguments:
                        :description "Unix timestamp for the historical data"))
    :category "weather")
 
-  ;; gptel tool for creating a text file
   (gptel-make-tool
    :name "my_create_file"
-   :function (lambda (path filename content)
-               (let ((full-path (expand-file-name filename path)))
+   :function (lambda (rel-path filename content)
+               (let* ((project-root (projectile-project-root))
+                      (full-path (expand-file-name (concat (file-name-as-directory rel-path) filename)
+                                                   project-root)))
                  (with-temp-buffer
                    (insert content)
                    (write-file full-path))
-                 (format "Created file %s in %s" filename path)))
-   :description "Create a new file with the specified content"
-   :args (list '(:name "path"
-	               :type string
-	               :description "The directory where to create the file")
+                 (format "Created file %s in project path %s" filename rel-path)))
+   :description "Create a new file with the specified content (relative to project root)"
+   :args (list '(:name "rel-path"
+                       :type string
+                       :description "The directory path relative to project root (e.g., '.' or 'src/util')")
                '(:name "filename"
-	               :type string
-	               :description "The name of the file to create")
+                       :type string
+                       :description "The name of the file to create")
                '(:name "content"
-	               :type string
-	               :description "The content to write to the file"))
-   :category "filesystem")  
+                       :type string
+                       :description "The content to write to the file"))
+   :category "filesystem")
 
-  ;; gptel tool for listing directory contents
   (gptel-make-tool
    :name "my_list_directory"
-   :function (lambda (directory &optional match full)
-               (let* ((dir (expand-file-name directory))
+   :function (lambda (rel-path &optional match full)
+               (let* ((project-root (projectile-project-root))
+                      (dir (expand-file-name rel-path project-root))
                       (files (directory-files dir full match)))
                  (mapconcat #'identity files "\n")))
-   :description "List the contents of a directory"
-   :args (list '(:name "directory"
+   :description "List the contents of a directory (relative to project root)"
+   :args (list '(:name "rel-path"
                        :type string
-                       :description "The directory to list")
+                       :description "The directory path relative to project root (e.g., '.' or 'src/util')")
                '(:name "match"
                        :type string
                        :description "Optional regex pattern to filter files"
@@ -795,12 +837,11 @@ Arguments:
                        :optional t))
    :category "filesystem")
 
-
-  ;; gptel tool for reading from a file
   (gptel-make-tool
    :name "my_read_file"
-   :function (lambda (filepath &optional max-chars)
-               (let ((path (expand-file-name filepath)))
+   :function (lambda (rel-filepath &optional max-chars)
+               (let* ((project-root (projectile-project-root))
+                      (path (expand-file-name rel-filepath project-root)))
                  (if (file-readable-p path)
                      (with-temp-buffer
                        (insert-file-contents path)
@@ -809,22 +850,22 @@ Arguments:
                             (point-min)
                             (min (point-max) (+ (point-min) max-chars)))
                          (buffer-string)))
-                   (format "Error: Cannot read file %s" filepath))))
-   :description "Read the contents of a text file"
-   :args (list '(:name "filepath"
+                   (format "Error: Cannot read file %s" rel-filepath))))
+   :description "Read the contents of a text file (relative to project root)"
+   :args (list '(:name "rel-filepath"
                        :type string
-                       :description "Path to the file to read")
+                       :description "Path to the file relative to project root (e.g., 'README.md' or 'src/main.py')")
                '(:name "max-chars"
                        :type integer
                        :description "Optional maximum number of characters to read"
                        :optional t))
    :category "filesystem")
 
-  ;; gptel tool for updating an existing file
   (gptel-make-tool
    :name "my_update_file"
-   :function (lambda (filepath content &optional append)
-               (let ((path (expand-file-name filepath)))
+   :function (lambda (rel-filepath content &optional append)
+               (let* ((project-root (projectile-project-root))
+                      (path (expand-file-name rel-filepath project-root)))
                  (if (file-exists-p path)
                      (with-temp-buffer
                        (when append
@@ -834,12 +875,12 @@ Arguments:
                          (erase-buffer))
                        (insert content)
                        (write-file path)
-                       (format "Updated file %s successfully" filepath))
-                   (format "Error: File %s does not exist" filepath))))
-   :description "Update the contents of an existing file"
-   :args (list '(:name "filepath"
+                       (format "Updated file %s successfully" rel-filepath))
+                   (format "Error: File %s does not exist" rel-filepath))))
+   :description "Update the contents of an existing file (relative to project root)"
+   :args (list '(:name "rel-filepath"
                        :type string
-                       :description "Path to the file to update")
+                       :description "Path to the file relative to project root (e.g., 'README.md' or 'src/main.py')")
                '(:name "content"
                        :type string
                        :description "The content to write to the file")
@@ -848,6 +889,25 @@ Arguments:
                        :description "Whether to append to the file instead of replacing content"
                        :optional t))
    :category "filesystem"))
+
+
+(defun my/aws-login (profile)
+  "Login to AWS SSO with PROFILE and export credentials to environment."
+  (interactive (list (completing-read "AWS Profile: " 
+                                     (split-string (shell-command-to-string 
+                                                    "aws configure list-profiles") "\n" t))))
+  (message "Logging in to AWS SSO with profile %s..." profile)
+  (if (zerop (call-process "aws" nil nil nil "sso" "login" "--profile" profile))
+      (condition-case err
+          (let* ((json-string (shell-command-to-string
+                              (format "aws configure export-credentials --profile %s" profile)))
+                 (json-data (json-parse-string json-string :object-type 'plist)))
+            (setenv "AWS_ACCESS_KEY_ID" (plist-get json-data :AccessKeyId))
+            (setenv "AWS_SECRET_ACCESS_KEY" (plist-get json-data :SecretAccessKey))
+            (setenv "AWS_SESSION_TOKEN" (plist-get json-data :SessionToken))
+            (message "AWS credentials for profile %s exported to environment" profile))
+        (error (message "Failed to export credentials: %s" (error-message-string err))))
+    (message "AWS SSO login failed for profile %s" profile)))
 
 ;; claude code
 ;; (package-vc-install '(claude-code :url "https://github.com/stevemolitor/claude-code.el"))
