@@ -737,8 +737,9 @@ Arguments:
   (setf (alist-get 'default gptel-directives) "You are a large language model living in Emacs and a helpful assistant. Respond concisely. Put any mathematical expression or equation within a latex fragment so that it can be previewed in org mode.")
 
   (setq gptel-default-mode 'org-mode
-        ;; gptel-log-level 'info
+        gptel-log-level 'info
         gptel-model 'claude-3.7-sonnet
+        gptel-cache t
         gptel-backend gptel-backend-gh)
 
   (gptel-make-tool
@@ -891,6 +892,7 @@ Arguments:
    :category "filesystem"))
 
 
+
 (defun my/aws-login (profile)
   "Login to AWS SSO with PROFILE and export credentials to environment."
   (interactive (list (completing-read "AWS Profile: " 
@@ -908,10 +910,6 @@ Arguments:
             (message "AWS credentials for profile %s exported to environment" profile))
         (error (message "Failed to export credentials: %s" (error-message-string err))))
     (message "AWS SSO login failed for profile %s" profile)))
-
-;; claude code
-;; (package-vc-install '(claude-code :url "https://github.com/stevemolitor/claude-code.el"))
-(require 'claude-code)
 
 (use-package kubernetes)
 
