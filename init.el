@@ -58,10 +58,6 @@
   :config
   (advice-add 'describe-function-1 :after #'elisp-demos-advice-describe-function-1))
 
-;; Don't disable case-change functions
-(put 'upcase-region 'disabled nil)
-(put 'downcase-region 'disabled nil)
-
 ;; Line numbering
 (add-hook 'prog-mode-hook 'display-line-numbers-mode)
 
@@ -721,6 +717,16 @@ Arguments:
     (gptel-make-bedrock "Bedrock"
       :region "eu-west-2"))
 
+  (defvar gptel-backend-gemini
+    (gptel-make-gemini "Gemini"
+      :key (auth-source-pick-first-password :host "generativelanguage.googleapis.com")))
+
+  (gptel-make-preset 'gemini-with-search
+    :description "A preset for Gemini with web search"
+    :backend "Gemini"
+    :model 'gemini-2.5-flash
+    :request-params '(:tools [(:google_search ()) (:url_context ())]))
+
   (defvar gptel-backend-gh
     (gptel-make-gh-copilot "Copilot"))
 
@@ -738,9 +744,10 @@ Arguments:
 
   (setq gptel-default-mode 'org-mode
         gptel-log-level 'info
-        gptel-model 'claude-3.7-sonnet
+        ;; gptel-model 'claude-3.7-sonnet
         gptel-cache t
-        gptel-backend gptel-backend-gh)
+        gptel-model 'gemini-2.5-flash
+        gptel-backend gptel-backend-gemini)
 
   (gptel-make-tool
    :name "my_run_command"
@@ -890,8 +897,6 @@ Arguments:
                        :description "Whether to append to the file instead of replacing content"
                        :optional t))
    :category "filesystem"))
-
-
 
 (defun my/aws-login (profile)
   "Login to AWS SSO with PROFILE and export credentials to environment."
