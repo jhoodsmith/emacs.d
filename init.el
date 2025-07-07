@@ -20,6 +20,12 @@
            emacs-version
            minver)))
 
+;; Force decryption of ~/.authinfo.gpg
+(with-eval-after-load 'auth-source
+  (let ((auth-sources '((:source "~/.authinfo.gpg"))))
+    (auth-source-search :max 1)
+    (message "Auth-source credentials loaded")))
+
 ;; Load path
 (add-to-list 'load-path (expand-file-name "lisp" user-emacs-directory))
 (setq elisp-flymake-byte-compile-load-path load-path)
@@ -653,20 +659,13 @@
   ((rx ".ts" eos) . typescript-ts-mode)
   ((rx ".tsx" eos) . tsx-ts-mode))
 
-;; Copilot
-;; (use-package editorconfig)
-
-;; (use-package copilot
-;;   :load-path (lambda () (expand-file-name "copilot.el" user-emacs-directory))
-;;   :commands (global-copilot-mode)
-;;   :diminish
-;;   :bind (:map copilot-mode-map
-;;          ("M-n" . copilot-next-completion)
-;;          ("M-p" . copilot-previous-completion)
-;;          ("M-<return>" . copilot-accept-completion))
-;;   :hook
-;;   (text-mode . copilot-mode)
-;;   (prog-mode . copilot-mode))
+;; Using auth-source
+;; brew install gnupg
+;; Write to ~/.authinfo
+;; gpg -c ~/.authinfo
+;; rm ~/.authinfo
+;; Open in emacs and give pass phrase
+;; Use gpg -d ~/.authinfo.gpg to decrypt from command line
 
 (defun my/get-historical-weather (latitude longitude timestamp)
   "Get historical weather from openweathermap.org with metric units.
@@ -732,6 +731,7 @@ Arguments:
 
   (defvar gptel-backend-anthropic
     (gptel-make-anthropic "Claude"
+      :stream t
       :key (auth-source-pick-first-password :host "api.anthropic.com")))
 
   (defvar gptel-backend-openai
@@ -744,10 +744,10 @@ Arguments:
 
   (setq gptel-default-mode 'org-mode
         gptel-log-level 'info
-        ;; gptel-model 'claude-3.7-sonnet
+        gptel-model 'claude-3.7-sonnet
         gptel-cache t
-        gptel-model 'gemini-2.5-flash
-        gptel-backend gptel-backend-gemini)
+        ;; gptel-model 'gemini-2.5-flash
+        gptel-backend gptel-backend-gh)
 
   (gptel-make-tool
    :name "my_run_command"
