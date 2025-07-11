@@ -20,12 +20,6 @@
            emacs-version
            minver)))
 
-;; Force decryption of ~/.authinfo.gpg
-(with-eval-after-load 'auth-source
-  (let ((auth-sources '((:source "~/.authinfo.gpg"))))
-    (auth-source-search :max 1)
-    (message "Auth-source credentials loaded")))
-
 ;; Load path
 (add-to-list 'load-path (expand-file-name "lisp" user-emacs-directory))
 (setq elisp-flymake-byte-compile-load-path load-path)
@@ -714,6 +708,7 @@ Arguments:
 
   (defvar gptel-backend-bedrock
     (gptel-make-bedrock "Bedrock"
+      :stream t
       :region "eu-west-2"))
 
   (defvar gptel-backend-gemini
