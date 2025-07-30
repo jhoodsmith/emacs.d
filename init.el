@@ -741,6 +741,7 @@ Arguments:
         gptel-log-level 'info
         gptel-model 'claude-3.7-sonnet
         gptel-cache t
+        gptel-max-tokens 32000
         ;; gptel-model 'gemini-2.5-flash
         gptel-backend gptel-backend-gh)
 
