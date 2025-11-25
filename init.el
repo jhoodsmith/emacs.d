@@ -37,21 +37,27 @@
     (global-set-key (kbd "M-3") (lambda () (interactive) (insert "#"))))
 
 ;; Personal configuration
-(setq-default
- user-full-name "James Hood-Smith"
- user-mail-address "james@hood-smith.me.uk"
- ispell-dictionary "british")
+(setq user-full-name "James Hood-Smith"
+      user-mail-address "james@hood-smith.me.uk"
+      ispell-dictionary "british")
 
 ;; Some basic preferences
-(setq-default
- fill-column 80
- case-fold-search t
- column-number-mode t
- indent-tabs-mode nil
- create-lockfiles nil
- auto-save-default nil
- make-backup-files nil
- truncate-lines nil)
+(setq  fill-column 80
+       case-fold-search t
+       column-number-mode t
+       indent-tabs-mode nil
+       create-lockfiles nil
+       auto-save-default nil
+       make-backup-files nil
+       truncate-lines nil)
+
+(defun my/delete-whitespace-forward ()
+  "Dlete all whitespace characters forward until the next non-whitespace character."
+  (interactive)
+  (delete-region (point)
+                 (progn (skip-chars-forward " \t\n\r") (point))))
+
+(global-set-key (kbd "C-c d") 'my/delete-whitespace-forward)
 
 ;; Elisp Demos
 (use-package elisp-demos
@@ -77,7 +83,7 @@
 ;; Switch Window
 (use-package switch-window
   :config
-  (setq-default switch-window-shortcut-style 'alphabet)
+  (setq switch-window-shortcut-style 'alphabet)
   :bind (("M-o" . switch-window)
          ("C-x 1" . switch-window-then-maximize)
          ("C-x 2" . switch-window-then-split-below)
@@ -275,15 +281,15 @@
 
 (global-set-key (kbd "C-c n") #'my/new-org-note)
 
-(setq-default org-confirm-babel-evaluate nil
-              org-image-actual-width nil
-              org-startup-with-inline-images t
-              org-src-window-setup 'other-window
-              org-src-fontify-natively t
-              org-babel-python-command "python3"
-              org-agenda-files (directory-files-recursively "~/org" "\\.org$")
-              org-capture-templates '(("n" "Note" entry (file "~/org/inbox.org")
-                                       "* %?\nEntered on %U\n  %i\n  %a")))
+(setq org-confirm-babel-evaluate nil
+      org-image-actual-width nil
+      org-startup-with-inline-images t
+      org-src-window-setup 'other-window
+      org-src-fontify-natively t
+      org-babel-python-command "python3"
+      org-agenda-files (directory-files-recursively "~/org" "\\.org$")
+      org-capture-templates '(("n" "Note" entry (file "~/org/inbox.org")
+                               "* %?\nEntered on %U\n  %i\n  %a")))
 (use-package org-modern
   :hook
   (org-mode . org-modern-mode)
@@ -314,6 +320,7 @@
 (add-hook 'org-babel-after-execute-hook 'org-display-inline-images)
 
 (use-package ob-restclient)
+(use-package ob-typescript)
 
 (use-package mermaid-mode)
 
@@ -330,7 +337,7 @@
                                     org-mode)))
 (use-package ob-go)
 
-(setq-default org-ditaa-jar-path "/opt/homebrew/Cellar/ditaa/0.11.0_1/libexec/ditaa-0.11.0-standalone.jar")
+(setq org-ditaa-jar-path "/opt/homebrew/Cellar/ditaa/0.11.0_1/libexec/ditaa-0.11.0-standalone.jar")
 
 ;; Org presentations
 (use-package org-tree-slide
@@ -373,6 +380,7 @@
    (restclient . t)
    (ruby . t)
    (shell . t)
+   (typescript . t)
    (sql . t)))
 
 ;; Plantuml
@@ -423,6 +431,12 @@
 ;; Switch Java
 (require 'switch-java)
 
+;; Helm
+
+(define-derived-mode helm-mode yaml-mode "helm"
+  "Major mode for editing kubernetes helm templates")
+
+
 ;; Eglot
 (use-package eglot
   :ensure nil
@@ -440,6 +454,7 @@
 (with-eval-after-load 'eglot
   ;;(add-to-list 'eglot-server-programs '((ruby-mode ruby-ts-mode) . ("localhost" 7658))))
   (add-to-list 'eglot-server-programs '((ruby-mode ruby-ts-mode) . ("bundle" "exec" "solargraph" "stdio")))
+  (add-to-list 'eglot-server-programs '(helm-mode "helm_ls" "serve"))
   (add-to-list 'eglot-server-programs
                `((rust-mode rust-ts-mode) . ("rust-analyzer" :initializationOptions
                                              ( :procMacro (:enable t)
@@ -450,11 +465,11 @@
 ;; Ruby
 (defun my/ruby-set-lsp-config ()
   "Load LSP config from solargraph.json."
-  (setq-default eglot-workspace-configuration
-                (let* ((config-file (file-name-concat user-emacs-directory "lsp-config" "solargraph.json")))
-                  (with-temp-buffer
-                    (insert-file-contents config-file)
-                    (json-parse-buffer :object-type 'plist :false-object :json-false)))))
+  (setq eglot-workspace-configuration
+        (let* ((config-file (file-name-concat user-emacs-directory "lsp-config" "solargraph.json")))
+          (with-temp-buffer
+            (insert-file-contents config-file)
+            (json-parse-buffer :object-type 'plist :false-object :json-false)))))
 
 (add-hook 'ruby-mode-hook #'my/ruby-set-lsp-config)
 (add-hook 'ruby-ts-mode-hook #'my/ruby-set-lsp-config)
@@ -659,6 +674,11 @@
 ;; gpg -c ~/.authinfo
 ;; rm ~/.authinfo
 ;; Open in emacs and give pass phrase
+;; Ensure the following is in ~/.gnupg/gpg.conf:
+;;  use-agent 
+;;  pinentry-mode loopback
+;; Ensure the following is in ~/.gnupg/gpg-agent.conf
+;;  allow-loopback-pinentry
 ;; Use gpg -d ~/.authinfo.gpg to decrypt from command line
 
 (defun my/get-historical-weather (latitude longitude timestamp)
@@ -697,19 +717,25 @@ Arguments:
                       :args ("/Users/james.hood-smith/work" "/Users/james.hood-smith/scratch")))))
 
 (use-package gptel
+  :load-path "/Users/james.hood-smith/work/gptel"
   :bind (("C-c g s" . gptel-send)
          ("C-c g a" . gptel-add)
          ("C-c g m" . gptel-menu)
          ("C-c g g" . gptel)
+         ("C-c g f" . gptel-add-file)
          ("C-c g w" . gptel-rewrite)
          ("C-c g r" . gptel-context-remove-all))
   :config
   (require 'gptel-integrations)
+  (require 'gptel-bedrock)
+  (push '(eu-claude-sonnet-4-profile . "eu.anthropic.claude-sonnet-4-20250514-v1:0") gptel-bedrock--model-ids)
+  (push '(eu-claude-haiku-4.5-profile . "eu.anthropic.claude-haiku-4-5-20251001-v1:0") gptel-bedrock--model-ids)
 
   (defvar gptel-backend-bedrock
     (gptel-make-bedrock "Bedrock"
       :stream t
-      :region "eu-west-2"))
+      :models '(eu-claude-sonnet-4-profile eu-claude-haiku-4.5-profile)
+      :region "eu-west-1"))
 
   (defvar gptel-backend-gemini
     (gptel-make-gemini "Gemini"
@@ -741,12 +767,13 @@ Arguments:
         gptel-log-level 'info
         gptel-model 'claude-3.7-sonnet
         gptel-cache t
-        gptel-max-tokens 32000
+        gptel-max-tokens 8192
         ;; gptel-model 'gemini-2.5-flash
         gptel-backend gptel-backend-gh)
 
   (gptel-make-tool
    :name "my_run_command"
+   :confirm t
    :function (lambda (command)
                (let* ((project-root (projectile-project-root))
                       ;; Map command prefixes to their environment runners
@@ -799,6 +826,61 @@ Arguments:
    :category "weather")
 
   (gptel-make-tool
+   :name "my_create_directory"
+   :function (lambda (rel-path)
+               (let* ((project-root (projectile-project-root))
+                      (full-path (expand-file-name rel-path project-root)))
+                 (if (file-exists-p full-path)
+                     (format "Directory %s already exists" rel-path)
+                   (make-directory full-path t)
+                   (format "Created directory %s in project" rel-path))))
+   :description "Create a new directory (relative to project root)"
+   :args (list '(:name "rel-path"
+                       :type string
+                       :description "The directory path to create relative to project root (e.g., 'src/components' or 'tests/unit')"))
+   :category "file-write")
+
+  ;; Tool for viewing project structure with tree
+  (gptel-make-tool
+   :name "my_tree_view"
+   :function (lambda (&optional rel-path max-depth ignore-patterns)
+               (let* ((project-root (projectile-project-root))
+                      (target-dir (if rel-path
+                                      (expand-file-name rel-path project-root)
+                                    project-root))
+                      (args (list "-F" "--charset=ascii"))
+                      (default-directory target-dir))
+                 ;; Add depth limit if specified
+                 (when max-depth
+                   (setq args (append args (list "-L" (number-to-string max-depth)))))
+                 ;; Add ignore patterns if specified
+                 (when ignore-patterns
+                   (dolist (pattern (split-string ignore-patterns ","))
+                     (setq args (append args (list "-I" (string-trim pattern))))))
+                 ;; Add common ignores
+                 (setq args (append args '("-I" "node_modules" "-I" ".git" "-I" "__pycache__" "-I" "*.pyc" "-I" "tmp")))
+                 (with-temp-buffer
+                   (let ((exit-code (apply #'call-process "tree" nil t nil args)))
+                     (if (zerop exit-code)
+                         (buffer-string)
+                       (format "Error: tree command failed (exit code %d). Make sure 'tree' is installed." exit-code))))))
+   :description "View project directory structure using the tree command. Automatically ignores common files like node_modules, .git, __pycache__, etc."
+   :args (list '(:name "rel-path"
+                       :type string
+                       :description "Directory path relative to project root to view (default: project root)"
+                       :optional t)
+               '(:name "max-depth"
+                       :type integer
+                       :description "Maximum depth of directory tree to display (e.g., 2 for two levels)"
+                       :optional t)
+               '(:name "ignore-patterns"
+                       :type string
+                       :description "Comma-separated list of patterns to ignore (e.g., '*.log,temp*')"
+                       :optional t))
+   :category "file-read")
+
+
+  (gptel-make-tool
    :name "my_create_file"
    :function (lambda (rel-path filename content)
                (let* ((project-root (projectile-project-root))
@@ -818,7 +900,7 @@ Arguments:
                '(:name "content"
                        :type string
                        :description "The content to write to the file"))
-   :category "filesystem")
+   :category "file-write")
 
   (gptel-make-tool
    :name "my_list_directory"
@@ -839,7 +921,7 @@ Arguments:
                        :type boolean
                        :description "Whether to return full pathnames"
                        :optional t))
-   :category "filesystem")
+   :category "file-read")
 
   (gptel-make-tool
    :name "my_read_file"
@@ -863,7 +945,7 @@ Arguments:
                        :type integer
                        :description "Optional maximum number of characters to read"
                        :optional t))
-   :category "filesystem")
+   :category "file-read")
 
   (gptel-make-tool
    :name "my_update_file"
@@ -892,29 +974,213 @@ Arguments:
                        :type boolean
                        :description "Whether to append to the file instead of replacing content"
                        :optional t))
-   :category "filesystem"))
+   :category "file-write")
 
-(defun my/aws-login (profile)
-  "Login to AWS SSO with PROFILE and export credentials to environment."
+  ;; Basic status and info
+  (gptel-make-tool
+   :name "git_status"
+   :function (lambda ()
+               (let ((default-directory (projectile-project-root)))
+                 (shell-command-to-string "git status --porcelain")))
+   :description "Show git status for current project"
+   :category "git")
+
+  (gptel-make-tool
+   :name "git_branch"
+   :function (lambda ()
+               (let ((default-directory (projectile-project-root)))
+                 (shell-command-to-string "git branch -v")))
+   :description "Show current branch and recent commit info"
+   :category "git")
+
+  ;; View changes
+  (gptel-make-tool
+   :name "git_diff"
+   :function (lambda (&optional file-path staged)
+               (let* ((default-directory (projectile-project-root))
+                      (staged-flag (if staged "--cached" ""))
+                      (file-arg (if file-path file-path ""))
+                      (command (format "git diff %s %s" staged-flag file-arg)))
+                 (shell-command-to-string command)))
+   :description "Show git diff for unstaged changes, or staged changes if staged=true"
+   :args (list '(:name "file-path"
+                       :type string
+                       :description "Optional specific file to diff (relative to project root)"
+                       :optional t)
+               '(:name "staged"
+                       :type boolean
+                       :description "Show staged changes instead of unstaged"
+                       :optional t))
+   :category "git")
+
+  ;; History
+  (gptel-make-tool
+   :name "git_log"
+   :function (lambda (&optional max-count file-path)
+               (let* ((default-directory (projectile-project-root))
+                      (count-arg (if max-count (format "-n %d" max-count) "-n 10"))
+                      (file-arg (if file-path (format "-- %s" file-path) ""))
+                      (command (format "git log --oneline %s %s" count-arg file-arg)))
+                 (shell-command-to-string command)))
+   :description "Show git commit history (default 10 commits)"
+   :args (list '(:name "max-count"
+                       :type integer
+                       :description "Maximum number of commits to show"
+                       :optional t)
+               '(:name "file-path"
+                       :type string
+                       :description "Show history for specific file only"
+                       :optional t))
+   :category "git")
+
+  ;; Show specific commit
+  (gptel-make-tool
+   :name "git_show"
+   :function (lambda (commit-hash &optional file-path)
+               (let* ((default-directory (projectile-project-root))
+                      (file-arg (if file-path (format "-- %s" file-path) ""))
+                      (command (format "git show %s %s" commit-hash file-arg)))
+                 (shell-command-to-string command)))
+   :description "Show details of a specific commit"
+   :args (list '(:name "commit-hash"
+                       :type string
+                       :description "Git commit hash or reference (e.g., 'HEAD', 'main')")
+               '(:name "file-path"
+                       :type string
+                       :description "Show changes for specific file only"
+                       :optional t))
+   :category "git")
+
+  ;; Remote info
+  (gptel-make-tool
+   :name "git_remote"
+   :function (lambda ()
+               (let ((default-directory (projectile-project-root)))
+                 (shell-command-to-string "git remote -v")))
+   :description "Show git remote repositories"
+   :category "git")
+
+  ;; Delete operations
+  (gptel-make-tool
+   :name "my_delete_file"
+   :function (lambda (rel-filepath)
+               (let* ((project-root (projectile-project-root))
+                      (full-path (expand-file-name rel-filepath project-root)))
+                 (if (file-exists-p full-path)
+                     (if (file-directory-p full-path)
+                         (format "Error: %s is a directory, use my_delete_directory instead" rel-filepath)
+                       (delete-file full-path)
+                       (format "Deleted file %s" rel-filepath))
+                   (format "Error: File %s does not exist" rel-filepath))))
+   :description "Delete a file from the current project"
+   :args (list '(:name "rel-filepath"
+                       :type string
+                       :description "Path to the file relative to project root (e.g., 'src/old_file.py')"))
+   :category "file-write")
+
+  (gptel-make-tool
+   :name "my_delete_directory"
+   :function (lambda (rel-path &optional recursive)
+               (let* ((project-root (projectile-project-root))
+                      (full-path (expand-file-name rel-path project-root)))
+                 (if (file-exists-p full-path)
+                     (if (file-directory-p full-path)
+                         (if recursive
+                             (progn
+                               (delete-directory full-path t)
+                               (format "Deleted directory %s and all contents" rel-path))
+                           (if (directory-files full-path nil "^[^.]")
+                               (format "Error: Directory %s is not empty. Use recursive=true to delete with contents" rel-path)
+                             (progn
+                               (delete-directory full-path)
+                               (format "Deleted empty directory %s" rel-path))))
+                       (format "Error: %s is not a directory" rel-path))
+                   (format "Error: Directory %s does not exist" rel-path))))
+   :description "Delete a directory from the current project"
+   :args (list '(:name "rel-path"
+                       :type string
+                       :description "Path to the directory relative to project root (e.g., 'old_folder')")
+               '(:name "recursive"
+                       :type boolean
+                       :description "Whether to delete directory and all its contents"
+                       :optional t))
+   :category "file-write")
+
+  ;; Rename/move operations
+  (gptel-make-tool
+   :name "my_rename_file"
+   :function (lambda (old-rel-path new-rel-path)
+               (let* ((project-root (projectile-project-root))
+                      (old-full-path (expand-file-name old-rel-path project-root))
+                      (new-full-path (expand-file-name new-rel-path project-root)))
+                 (cond
+                  ((not (file-exists-p old-full-path))
+                   (format "Error: Source file %s does not exist" old-rel-path))
+                  ((file-exists-p new-full-path)
+                   (format "Error: Destination %s already exists" new-rel-path))
+                  (t
+                   ;; Create destination directory if needed
+                   (let ((new-dir (file-name-directory new-full-path)))
+                     (when (and new-dir (not (file-exists-p new-dir)))
+                       (make-directory new-dir t)))
+                   (rename-file old-full-path new-full-path)
+                   (format "Renamed %s to %s" old-rel-path new-rel-path)))))
+   :description "Rename or move a file within the current project"
+   :args (list '(:name "old-rel-path"
+                       :type string
+                       :description "Current path of the file relative to project root")
+               '(:name "new-rel-path"
+                       :type string
+                       :description "New path for the file relative to project root"))
+   :category "file-write")
+
+  (gptel-make-tool
+   :name "my_copy_file"
+   :function (lambda (source-rel-path dest-rel-path)
+               (let* ((project-root (projectile-project-root))
+                      (source-full-path (expand-file-name source-rel-path project-root))
+                      (dest-full-path (expand-file-name dest-rel-path project-root)))
+                 (cond
+                  ((not (file-exists-p source-full-path))
+                   (format "Error: Source file %s does not exist" source-rel-path))
+                  ((file-directory-p source-full-path)
+                   (format "Error: %s is a directory, not a file" source-rel-path))
+                  ((file-exists-p dest-full-path)
+                   (format "Error: Destination %s already exists" dest-rel-path))
+                  (t
+                   ;; Create destination directory if needed
+                   (let ((dest-dir (file-name-directory dest-full-path)))
+                     (when (and dest-dir (not (file-exists-p dest-dir)))
+                       (make-directory dest-dir t)))
+                   (copy-file source-full-path dest-full-path)
+                   (format "Copied %s to %s" source-rel-path dest-rel-path)))))
+   :description "Copy a file within the current project"
+   :args (list '(:name "source-rel-path"
+                       :type string
+                       :description "Path of the source file relative to project root")
+               '(:name "dest-rel-path"
+                       :type string
+                       :description "Path for the destination file relative to project root"))
+   :category "file-write"))
+
+(defun my/gptel-aws-sso-login (profile)
+  "Login to AWS SSO and set PROFILE for gptel-bedrock."
   (interactive (list (completing-read "AWS Profile: " 
-                                     (split-string (shell-command-to-string 
-                                                    "aws configure list-profiles") "\n" t))))
+                                      (split-string (shell-command-to-string 
+                                                     "aws configure list-profiles") "\n" t))))
   (message "Logging in to AWS SSO with profile %s..." profile)
   (if (zerop (call-process "aws" nil nil nil "sso" "login" "--profile" profile))
-      (condition-case err
-          (let* ((json-string (shell-command-to-string
-                              (format "aws configure export-credentials --profile %s" profile)))
-                 (json-data (json-parse-string json-string :object-type 'plist)))
-            (setenv "AWS_ACCESS_KEY_ID" (plist-get json-data :AccessKeyId))
-            (setenv "AWS_SECRET_ACCESS_KEY" (plist-get json-data :SecretAccessKey))
-            (setenv "AWS_SESSION_TOKEN" (plist-get json-data :SessionToken))
-            (message "AWS credentials for profile %s exported to environment" profile))
-        (error (message "Failed to export credentials: %s" (error-message-string err))))
+      (progn
+        (setenv "AWS_PROFILE" profile)
+        (message "AWS SSO login successful, set profile to %s for gptel-bedrock" profile))
     (message "AWS SSO login failed for profile %s" profile)))
+
+(use-package gptel-magit
+  :hook (magit-mode . gptel-magit-install))
 
 (use-package kubernetes)
 
 ;; Configure warnings
-(setq-default warning-minimum-level :error)
+(setq warning-minimum-level :error)
 
 ;;; init.el ends here
