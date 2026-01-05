@@ -717,7 +717,7 @@ Arguments:
                       :args ("/Users/james.hood-smith/work" "/Users/james.hood-smith/scratch")))))
 
 (use-package gptel
-  :load-path "/Users/james.hood-smith/work/gptel"
+  ;; :load-path "/Users/james.hood-smith/work/gptel"
   :bind (("C-c g s" . gptel-send)
          ("C-c g a" . gptel-add)
          ("C-c g m" . gptel-menu)
@@ -744,7 +744,9 @@ Arguments:
   (gptel-make-preset 'gemini-with-search
     :description "A preset for Gemini with web search"
     :backend "Gemini"
+    :include-reasoning nil
     :model 'gemini-2.5-flash
+    :system "You are a helpful assistant working within Emacs. When presenting results from web search always give me URL so I can cross check."
     :request-params '(:tools [(:google_search ()) (:url_context ())]))
 
   (defvar gptel-backend-gh
@@ -755,13 +757,20 @@ Arguments:
       :stream t
       :key (auth-source-pick-first-password :host "api.anthropic.com")))
 
+  (gptel-make-preset 'claude-with-search
+    :description "A preset for Claude with web search"
+    :backend "Claude"
+    :model 'claude-sonnet-4-5-20250929
+    :system "You are a helpful assistant working within Emacs. When presenting results from web search always give me URL so I can cross check."
+    :request-params '(:tools [(:type "web_search_20250305" :name "web_search" :max_uses 5)]))
+
   (defvar gptel-backend-openai
     (gptel-make-openai "ChatGPT"
       :stream t
       :models gptel--openai-models
       :key (auth-source-pick-first-password :host "api.openai.com")))
 
-  (setf (alist-get 'default gptel-directives) "You are a large language model living in Emacs and a helpful assistant. Respond concisely. Put any mathematical expression or equation within a latex fragment so that it can be previewed in org mode.")
+  (setf (alist-get 'default gptel-directives) "You are a large language model living in Emacs and a helpful assistant. Respond concisely.")
 
   (setq gptel-default-mode 'org-mode
         gptel-log-level 'info
@@ -976,6 +985,33 @@ Arguments:
                        :optional t))
    :category "file-write")
 
+  (gptel-make-tool
+   :name "my_fetch_webpage"
+   :function (lambda (url &optional raw)
+               (with-temp-buffer
+		 (condition-case err
+                     (progn
+                       (url-insert-file-contents url)
+                       (if raw
+                           ;; Return raw HTML if requested
+                           (buffer-string)
+			 ;; Otherwise extract readable content
+			 (let* ((dom (libxml-parse-html-region (point-min) (point-max)))
+				(best-node (eww-highest-readability dom)))
+                           (erase-buffer)
+                           (shr-insert-document best-node)
+                           (buffer-substring-no-properties (point-min) (point-max)))))
+                   (error (format "Error fetching %s: %s" url (error-message-string err))))))
+   :description "Fetch and extract readable text content from a webpage URL"
+   :args (list '(:name "url"
+                       :type string
+                       :description "The URL to fetch (e.g., 'https://example.com')")
+               '(:name "raw"
+                       :type boolean
+                       :description "Return raw HTML instead of extracted readable text"
+                       :optional t))
+   :category "web")
+
   ;; Basic status and info
   (gptel-make-tool
    :name "git_status"
@@ -1162,6 +1198,45 @@ Arguments:
                        :type string
                        :description "Path for the destination file relative to project root"))
    :category "file-write"))
+
+;; (require 'gptel)
+;; (require 'gptel-anthropic)
+
+;; (defcustom gptel-claude-web-search nil
+;;   "Whether to enable Claude's built-in web search tool.
+
+;; This only works with Anthropic backends and compatible Claude models."
+;;   :type 'boolean
+;;   :group 'gptel)
+
+;; ;; Advice to add web search tool during request data construction
+;; (defun gptel--anthropic-add-web-search (orig-fun backend prompts)
+;;   "Advice to add Claude web search tool to Anthropic requests.
+
+;;    ORIG-FUN is the original function being advised.
+;;    BACKEND is the gptel backend configuration.
+;;    PROMPTS is the list of conversation prompts."
+;;   (let ((data (funcall orig-fun backend prompts)))
+;;     ;; Only add if web search is enabled and we're using an Anthropic backend
+;;     (when (and gptel-claude-web-search
+;;                (cl-typep backend 'gptel-anthropic))
+;;       (let ((current-tools (plist-get data :tools)))
+;;         ;; Add web search tool to the beginning of tools array
+;;         (plist-put data :tools
+;;                    (vconcat
+;;                     (vector '(:type "web_search_20250305"
+;;                               :name "web_search"
+;;                               :max_uses 5))
+;;                     (or current-tools [])))))
+;;     data))
+
+;; (advice-add 'gptel--request-data :around #'gptel--anthropic-add-web-search)
+
+;; ;; Create a preset for convenience
+;; (gptel-make-preset 'claude-web-search
+;;   :description "Claude with web search capability"
+;;   :backend "Claude"
+;;   :claude-web-search t)
 
 (defun my/gptel-aws-sso-login (profile)
   "Login to AWS SSO and set PROFILE for gptel-bedrock."
