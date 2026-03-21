@@ -285,11 +285,12 @@
       org-image-actual-width nil
       org-startup-with-inline-images t
       org-src-window-setup 'other-window
+      org-tags-column -88
       org-src-fontify-natively t
       org-babel-python-command "python3"
       org-agenda-files (directory-files-recursively "~/org" "\\.org$")
-      org-capture-templates '(("n" "Note" entry (file "~/org/inbox.org")
-                               "* %?\nEntered on %U\n  %i\n  %a")))
+      org-capture-templates '(("n" "Note" entry (file "~/org/learnings.org")
+                               "* %?%^g\nEntered on %U\n  %i\n")))
 (use-package org-modern
   :hook
   (org-mode . org-modern-mode)
@@ -311,10 +312,11 @@
   (setq org-modern-hide-stars nil)  ;; Keep the asterisks visible
   
   ;; Optional: add some padding in org-mode buffers
-  (add-hook 'org-mode-hook #'(lambda ()
-                               (setq left-margin-width 2)
-                               (setq right-margin-width 2)
-                               (set-window-buffer nil (current-buffer)))))
+  ;; (add-hook 'org-mode-hook #'(lambda ()
+  ;;                              (setq left-margin-width 2)
+  ;;                              (setq right-margin-width 2)
+  ;;                              (set-window-buffer nil (current-buffer))))
+  )
 
 ;; update images in the buffer after I evaluate
 (add-hook 'org-babel-after-execute-hook 'org-display-inline-images)
@@ -327,7 +329,8 @@
 ;; Requires mermaid-cli: npm install -g @mermaid-js/mermaid-cli
 (use-package ob-mermaid
   :custom
-  (ob-mermaid-cli-path "~/.asdf/shims/mmdc"))
+  (ob-mermaid-cli-path "~/.asdf/s
+hims/mmdc"))
 
 ;; Converting Jupyter notebooks
 (use-package code-cells
@@ -621,6 +624,8 @@
 (use-package go-ts-mode
   :hook
   (go-ts-mode . go-format-on-save-mode)
+  :bind (:map go-ts-mode-map
+	      ("C-c C-c" . compile))
   :config
   (reformatter-define go-format
     :program "goimports"
@@ -661,12 +666,18 @@
 
 ;; Typescript
 (use-package typescript-ts-mode
-  :hook
-  (tsx-ts-mode . sgml-electric-tag-pair-mode)
+  :config
+  (reformatter-define prettier-format
+    :program "npx"
+    :args (list "prettier" "--stdin-filepath" (buffer-file-name)))
   :mode
   ((rx ".mjs" eos) . typescript-ts-mode)
   ((rx ".ts" eos) . typescript-ts-mode)
-  ((rx ".tsx" eos) . tsx-ts-mode))
+  ((rx ".tsx" eos) . tsx-ts-mode)
+  :hook
+  (tsx-ts-mode . prettier-format-on-save-mode)
+  (typescript-ts-mode . prettier-format-on-save-mode)
+  (tsx-ts-mode . sgml-electric-tag-pair-mode))
 
 ;; Using auth-source
 ;; brew install gnupg
@@ -712,12 +723,14 @@ Arguments:
                       :command "uvx"
                       :args ("awslabs.aws-documentation-mcp-server@latest")
                       :env (:FASTMCP_LOG_LEVEL "ERROR" :AWS_DOCUMENTATION_PARTITION "aws"))
+		     ("gocardless" .
+		      (:url "https://mcp.gocardless.com"))
                      ("filesystem"
                       :command "mcp-filesystem-server"
-                      :args ("/Users/james.hood-smith/work" "/Users/james.hood-smith/scratch")))))
+	                      :args ("/Users/james.hood-smith/work" "/Users/james.hood-smith/scratch")))))
 
 (use-package gptel
-  ;; :load-path "/Users/james.hood-smith/work/gptel"
+  :load-path "/Users/james.hood-smith/work/gptel"
   :bind (("C-c g s" . gptel-send)
          ("C-c g a" . gptel-add)
          ("C-c g m" . gptel-menu)
@@ -728,13 +741,15 @@ Arguments:
   :config
   (require 'gptel-integrations)
   (require 'gptel-bedrock)
-  (push '(eu-claude-sonnet-4-profile . "eu.anthropic.claude-sonnet-4-20250514-v1:0") gptel-bedrock--model-ids)
+  (push '(eu-claude-sonnet-4.5-profile . "eu.anthropic.claude-sonnet-4-5-20250929-v1:0") gptel-bedrock--model-ids)
   (push '(eu-claude-haiku-4.5-profile . "eu.anthropic.claude-haiku-4-5-20251001-v1:0") gptel-bedrock--model-ids)
+  (push '(eu-claude-opus-4.6-profile . "eu.anthropic.claude-opus-4-6-v1") gptel-bedrock--model-ids)
+  (push '(eu-claude-sonnet-4.6-profile . "eu.anthropic.claude-sonnet-4-6") gptel-bedrock--model-ids)
 
   (defvar gptel-backend-bedrock
     (gptel-make-bedrock "Bedrock"
       :stream t
-      :models '(eu-claude-sonnet-4-profile eu-claude-haiku-4.5-profile)
+      :models '(eu-claude-haiku-4.5-profile eu-claude-sonnet-4.5-profile eu-claude-opus-4.6-profile eu-claude-sonnet-4.6-profile)
       :region "eu-west-1"))
 
   (defvar gptel-backend-gemini
@@ -746,7 +761,7 @@ Arguments:
     :backend "Gemini"
     :include-reasoning nil
     :model 'gemini-2.5-flash
-    :system "You are a helpful assistant working within Emacs. When presenting results from web search always give me URL so I can cross check."
+    :system "You are a helpful assistant working within Emacs. When presenting results from web search always include the URL for each result in your response so I can verify information."
     :request-params '(:tools [(:google_search ()) (:url_context ())]))
 
   (defvar gptel-backend-gh
@@ -782,7 +797,7 @@ Arguments:
 
   (gptel-make-tool
    :name "my_run_command"
-   :confirm t
+   :confirm nil
    :function (lambda (command)
                (let* ((project-root (projectile-project-root))
                       ;; Map command prefixes to their environment runners
@@ -790,13 +805,17 @@ Arguments:
                                          ("ruff" . "uv run")
                                          ("mypy" . "uv run")
                                          ("rspec" . "bundle exec")
-                                         ("rubocop" . "bundle exec")))
+                                         ("rubocop" . "bundle exec")
+					 ("go" . "")
+					 ("npm" . "")))
                       (cmd-name (car (split-string command)))
                       (cmd-entry (assoc cmd-name command-env-map)))
                  (if cmd-entry
                      (let* ((default-directory project-root)
                             (env-prefix (cdr cmd-entry))
-                            (full-command (format "%s %s" env-prefix command)))
+                            (full-command (if (string-empty-p env-prefix)
+					      command
+					    (format "%s %s" env-prefix command))))
                        (with-temp-buffer
                          (let ((exit-code (call-process-shell-command full-command nil t nil)))
                            (let ((output (buffer-string)))
@@ -807,7 +826,7 @@ Arguments:
    :description "Run whitelisted development commands from the project root. Python commands run with uv run, Ruby commands with bundle exec."
    :args (list '(:name "command"
                        :type string
-                       :description "The command to run. Available commands: pytest, ruff, mypy (Python); rspec, rubocop (Ruby). Arguments can be added after the command."))
+                       :description "The command to run. Available commands: pytest, ruff, mypy (Python); rspec, rubocop (Ruby); go (golang); npm (node). Arguments can be added after the command."))
    :category "development")
 
   ;; gptel tool for getting current time
@@ -1012,6 +1031,37 @@ Arguments:
                        :optional t))
    :category "web")
 
+  (gptel-make-tool
+   :name "my_web_search"
+   :function (lambda (query &optional count)
+               (let* ((api-key (auth-source-pick-first-password :host "api.search.brave.com"))
+                      (url (format "https://api.search.brave.com/res/v1/web/search?q=%s&count=%d"
+                                   (url-hexify-string query)
+                                   (or count 5)))
+                      (url-request-extra-headers 
+                       `(("Accept" . "application/json")
+			 ("X-Subscription-Token" . ,api-key))))
+		 (with-temp-buffer
+                   (url-insert-file-contents url)
+                   (let* ((json (json-parse-buffer :object-type 'plist))
+                          (results (plist-get (plist-get json :web) :results)))
+                     (mapconcat 
+                      (lambda (r)
+			(format "Title: %s\nURL: %s\nDescription: %s\n"
+				(plist-get r :title)
+				(plist-get r :url)
+				(plist-get r :description)))
+                      results "\n---\n")))))
+   :description "Search the web using Brave Search API."
+   :args (list '(:name "query"
+                       :type string
+                       :description "Search query")
+               '(:name "count"
+                       :type integer
+                       :description "Number of results (default 5)"
+                       :optional t))
+   :category "web")
+
   ;; Basic status and info
   (gptel-make-tool
    :name "git_status"
@@ -1032,13 +1082,14 @@ Arguments:
   ;; View changes
   (gptel-make-tool
    :name "git_diff"
-   :function (lambda (&optional file-path staged)
+   :function (lambda (&optional file-path staged ref)
                (let* ((default-directory (projectile-project-root))
                       (staged-flag (if staged "--cached" ""))
-                      (file-arg (if file-path file-path ""))
-                      (command (format "git diff %s %s" staged-flag file-arg)))
-                 (shell-command-to-string command)))
-   :description "Show git diff for unstaged changes, or staged changes if staged=true"
+                      (ref-arg (or ref ""))
+                      (file-arg (if file-path (format "-- %s" file-path) ""))
+                      (command (format "git diff %s %s %s" staged-flag ref-arg file-arg)))
+		 (shell-command-to-string command)))
+   :description "Show git diff. Can show unstaged changes, staged changes, or diff against a ref/branch."
    :args (list '(:name "file-path"
                        :type string
                        :description "Optional specific file to diff (relative to project root)"
@@ -1046,6 +1097,10 @@ Arguments:
                '(:name "staged"
                        :type boolean
                        :description "Show staged changes instead of unstaged"
+                       :optional t)
+               '(:name "ref"
+                       :type string
+                       :description "Git ref to diff against (e.g., 'main', 'HEAD~3', 'branch1..branch2')"
                        :optional t))
    :category "git")
 
@@ -1259,3 +1314,4 @@ Arguments:
 (setq warning-minimum-level :error)
 
 ;;; init.el ends here
+(put 'upcase-region 'disabled nil)
