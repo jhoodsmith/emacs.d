@@ -336,8 +336,8 @@ hims/mmdc"))
 (use-package code-cells
   :custom
   (code-cells-convert-ipynb-style '(("pandoc" "--to" "ipynb" "--from" "org")
-	                            ("pandoc" "--to" "org" "--from" "ipynb")
-                                    org-mode)))
+				    ("pandoc" "--to" "org" "--from" "ipynb" "--extract-media" "./ipynb-images/")
+                                       (lambda () #'org-mode))))
 (use-package ob-go)
 
 (setq org-ditaa-jar-path "/opt/homebrew/Cellar/ditaa/0.11.0_1/libexec/ditaa-0.11.0-standalone.jar")
@@ -406,6 +406,14 @@ hims/mmdc"))
   (add-hook 'python-mode-hook 'pyvenv-mode)
   (add-hook 'python-mode-hook 'pyvenv-tracking-mode))
 
+(defun my/uv-activate ()
+  "Activate the uv venv for the current project."
+  (interactive)
+  (let ((venv (concat (projectile-project-root) ".venv")))
+    (when (file-exists-p venv)
+      (pyvenv-activate venv))))
+
+;; (add-hook 'python-base-mode-hook #'my/uv-activate)
 
 ;; Export to Hugo
 (use-package ox-hugo)
@@ -458,6 +466,7 @@ hims/mmdc"))
   ;;(add-to-list 'eglot-server-programs '((ruby-mode ruby-ts-mode) . ("localhost" 7658))))
   (add-to-list 'eglot-server-programs '((ruby-mode ruby-ts-mode) . ("bundle" "exec" "solargraph" "stdio")))
   (add-to-list 'eglot-server-programs '(helm-mode "helm_ls" "serve"))
+  (add-to-list 'eglot-server-programs '((python-ts-mode python-mode) . ("uv" "run" "pylsp")))
   (add-to-list 'eglot-server-programs
                `((rust-mode rust-ts-mode) . ("rust-analyzer" :initializationOptions
                                              ( :procMacro (:enable t)
@@ -670,6 +679,7 @@ hims/mmdc"))
   (reformatter-define prettier-format
     :program "npx"
     :args (list "prettier" "--stdin-filepath" (buffer-file-name)))
+  (add-to-list 'org-src-lang-modes '("typescript" . typescript-ts))
   :mode
   ((rx ".mjs" eos) . typescript-ts-mode)
   ((rx ".ts" eos) . typescript-ts-mode)
@@ -727,7 +737,7 @@ Arguments:
 		      (:url "https://mcp.gocardless.com"))
                      ("filesystem"
                       :command "mcp-filesystem-server"
-	                      :args ("/Users/james.hood-smith/work" "/Users/james.hood-smith/scratch")))))
+	              :args ("/Users/james.hood-smith/work" "/Users/james.hood-smith/scratch")))))
 
 (use-package gptel
   :load-path "/Users/james.hood-smith/work/gptel"
@@ -775,9 +785,18 @@ Arguments:
   (gptel-make-preset 'claude-with-search
     :description "A preset for Claude with web search"
     :backend "Claude"
-    :model 'claude-sonnet-4-5-20250929
+    :model 'claude-sonnet-4-6
     :system "You are a helpful assistant working within Emacs. When presenting results from web search always give me URL so I can cross check."
-    :request-params '(:tools [(:type "web_search_20250305" :name "web_search" :max_uses 5)]))
+    :request-params '(:tools[(:type "web_search_20260209" :name "web_search" :allowed_callers ["direct"])
+			     (:type "web_fetch_20260209" :name "web_fetch"  :allowed_callers ["direct"])]))
+
+  (gptel-make-preset 'bedrock-with-search
+    :description "A preset for Bedrock with Claude 4.6 and web search"
+    :backend "Bedrock"
+    :model 'eu-claude-sonnet-4.6-profile
+    :system "You are a helpful assistant working within Emacs. When presenting results from web search always give me URL so I can cross check. I live near London, England."
+    :tools '("my_web_search" "my_fetch_webpage"))
+
 
   (defvar gptel-backend-openai
     (gptel-make-openai "ChatGPT"
@@ -1169,6 +1188,45 @@ Arguments:
                        :description "Path to the file relative to project root (e.g., 'src/old_file.py')"))
    :category "file-write")
 
+  ;; Git Blame
+  (gptel-make-tool
+   :name "git_blame"
+   :function (lambda (file-path &optional start-line end-line)
+               (let* ((default-directory (projectile-project-root))
+                      (range-arg (if (and start-line end-line)
+                                     (format "-L %d,%d" start-line end-line)
+                                   ""))
+                      (command (format "git blame %s %s" range-arg file-path)))
+		 (shell-command-to-string command)))
+   :description "Show who last modified each line of a file, with commit hash and timestamp."
+   :args (list '(:name "file-path"
+                       :type string
+                       :description "Path to the file relative to project root")
+               '(:name "start-line"
+                       :type integer
+                       :description "Start of line range to blame"
+                       :optional t)
+               '(:name "end-line"
+                       :type integer
+                       :description "End of line range to blame"
+                       :optional t))
+   :category "git")
+
+  (gptel-make-tool
+   :name "git_file_at_commit"
+   :function (lambda (commit-hash file-path)
+               (let* ((default-directory (projectile-project-root))
+                      (command (format "git show %s:%s" commit-hash file-path)))
+		 (shell-command-to-string command)))
+   :description "Show the full contents of a file at a specific commit."
+   :args (list '(:name "commit-hash"
+                       :type string
+                       :description "Git commit hash or reference (e.g., 'HEAD', 'main', 'abc1234')")
+               '(:name "file-path"
+                       :type string
+                       :description "Path to the file relative to project root"))
+   :category "git")
+
   (gptel-make-tool
    :name "my_delete_directory"
    :function (lambda (rel-path &optional recursive)
@@ -1195,6 +1253,44 @@ Arguments:
                        :type boolean
                        :description "Whether to delete directory and all its contents"
                        :optional t))
+   :category "file-write")
+
+  (gptel-make-tool
+   :name "my_patch_file"
+   :function (lambda (rel-filepath old-content new-content)
+               (let* ((project-root (projectile-project-root))
+                      (path (expand-file-name rel-filepath project-root)))
+		 (if (not (file-exists-p path))
+                     (format "Error: File %s does not exist" rel-filepath)
+                   (with-temp-buffer
+                     (insert-file-contents path)
+                     (let ((matches 0)
+                           (search-start (point-min)))
+                       (save-excursion
+			 (goto-char search-start)
+			 (while (search-forward old-content nil t)
+                           (setq matches (1+ matches))))
+                       (cond
+			((= matches 0)
+			 (format "Error: Could not find the specified content in %s" rel-filepath))
+			((> matches 1)
+			 (format "Error: Found %d matches in %s — too ambiguous to patch safely" matches rel-filepath))
+			(t
+			 (goto-char (point-min))
+			 (search-forward old-content)
+			 (replace-match new-content t t)
+			 (write-file path)
+			 (format "Patched %s successfully" rel-filepath))))))))
+   :description "Make a targeted edit to an existing file by replacing a specific block of text. Read the file first to ensure you have the exact current content."
+   :args (list '(:name "rel-filepath"
+                       :type string
+                       :description "Path to the file relative to project root (e.g., 'src/main.py')")
+               '(:name "old-content"
+                       :type string
+                       :description "The exact block of text to find and replace. Must match precisely.")
+               '(:name "new-content"
+                       :type string
+                       :description "The new content to replace the old block with."))
    :category "file-write")
 
   ;; Rename/move operations
@@ -1254,45 +1350,6 @@ Arguments:
                        :description "Path for the destination file relative to project root"))
    :category "file-write"))
 
-;; (require 'gptel)
-;; (require 'gptel-anthropic)
-
-;; (defcustom gptel-claude-web-search nil
-;;   "Whether to enable Claude's built-in web search tool.
-
-;; This only works with Anthropic backends and compatible Claude models."
-;;   :type 'boolean
-;;   :group 'gptel)
-
-;; ;; Advice to add web search tool during request data construction
-;; (defun gptel--anthropic-add-web-search (orig-fun backend prompts)
-;;   "Advice to add Claude web search tool to Anthropic requests.
-
-;;    ORIG-FUN is the original function being advised.
-;;    BACKEND is the gptel backend configuration.
-;;    PROMPTS is the list of conversation prompts."
-;;   (let ((data (funcall orig-fun backend prompts)))
-;;     ;; Only add if web search is enabled and we're using an Anthropic backend
-;;     (when (and gptel-claude-web-search
-;;                (cl-typep backend 'gptel-anthropic))
-;;       (let ((current-tools (plist-get data :tools)))
-;;         ;; Add web search tool to the beginning of tools array
-;;         (plist-put data :tools
-;;                    (vconcat
-;;                     (vector '(:type "web_search_20250305"
-;;                               :name "web_search"
-;;                               :max_uses 5))
-;;                     (or current-tools [])))))
-;;     data))
-
-;; (advice-add 'gptel--request-data :around #'gptel--anthropic-add-web-search)
-
-;; ;; Create a preset for convenience
-;; (gptel-make-preset 'claude-web-search
-;;   :description "Claude with web search capability"
-;;   :backend "Claude"
-;;   :claude-web-search t)
-
 (defun my/gptel-aws-sso-login (profile)
   "Login to AWS SSO and set PROFILE for gptel-bedrock."
   (interactive (list (completing-read "AWS Profile: " 
@@ -1313,5 +1370,9 @@ Arguments:
 ;; Configure warnings
 (setq warning-minimum-level :error)
 
+(require 'gnutls)
+(setq gnutls-trustfiles
+      (append gnutls-trustfiles
+              '("/Users/james.hood-smith/zscaler-root-ca.pem")))
+
 ;;; init.el ends here
-(put 'upcase-region 'disabled nil)
