@@ -517,8 +517,11 @@ hims/mmdc"))
 (use-package company-terraform
   :hook (terraform-mode . company-terraform-init))
 
-;; Silver surfer
-(use-package ag)
+;; Ripgrep
+;; brew install ripgrep
+(use-package rg
+  :config
+  (rg-enable-default-bindings))
 
 ;; SQL
 (use-package sql-indent
@@ -766,6 +769,12 @@ Arguments:
     (gptel-make-gemini "Gemini"
       :key (auth-source-pick-first-password :host "generativelanguage.googleapis.com")))
 
+  (gptel-make-preset 'about-me
+    :description "Include init.el and learnings.org as context"
+    :context '(:eval (list (expand-file-name "~/.emacs.d/init.el")
+				     (expand-file-name "~/work/cv/cv.tex")
+				     (expand-file-name "~/org/learnings/learnings.org"))))
+
   (gptel-make-preset 'gemini-with-search
     :description "A preset for Gemini with web search"
     :backend "Gemini"
@@ -819,6 +828,7 @@ Arguments:
    :confirm nil
    :function (lambda (command)
                (let* ((project-root (projectile-project-root))
+		      (max-output 10000)
                       ;; Map command prefixes to their environment runners
                       (command-env-map '(("pytest" . "uv run")
                                          ("ruff" . "uv run")
@@ -837,9 +847,14 @@ Arguments:
 					    (format "%s %s" env-prefix command))))
                        (with-temp-buffer
                          (let ((exit-code (call-process-shell-command full-command nil t nil)))
-                           (let ((output (buffer-string)))
+                           (let* ((output (buffer-string))
+				 (truncated (> (length output) max-output))
+				 (final-output (if truncated
+						   (concat (substring output 0 max-output)
+							   "\n...[truncated]")
+						 output)))
                              (format "Command: %s\nExit code: %d\nOutput:\n%s" 
-                                     full-command exit-code output)))))
+                                     full-command exit-code final-output)))))
                    (format "Error: Command '%s' is not in the whitelist. Allowed commands: %s" 
                            cmd-name (mapconcat #'car command-env-map ", ")))))
    :description "Run whitelisted development commands from the project root. Python commands run with uv run, Ruby commands with bundle exec."
@@ -926,6 +941,30 @@ Arguments:
                        :optional t))
    :category "file-read")
 
+  ;; Search using ripgrep
+  (gptel-make-tool
+   :name "my_search_project"
+   :function (lambda (pattern &optional file-pattern case-sensitive)
+               (let* ((default-directory (projectile-project-root))
+                      (case-arg (if case-sensitive "" "-i"))
+                      (file-arg (if file-pattern (format "-g '%s'" file-pattern) ""))
+                      (command (format "rg --no-heading --line-number --color=never %s %s '%s'" 
+                                       case-arg file-arg pattern)))
+		 (shell-command-to-string command)))
+   :description "Search for text pattern across project files using ripgrep (rg). Returns file paths, line numbers, and matching lines."
+   :args (list '(:name "pattern"
+                       :type string
+                       :description "Text pattern to search for (supports regex)")
+               '(:name "file-pattern"
+                       :type string
+                       :description "Optional glob pattern to filter files (e.g., '*.py', '*.rb')"
+                       :optional t)
+               '(:name "case-sensitive"
+                       :type boolean
+                       :description "Whether search should be case-sensitive (default: false)"
+                       :optional t))
+   :category "file-read")
+
 
   (gptel-make-tool
    :name "my_create_file"
@@ -972,26 +1011,34 @@ Arguments:
 
   (gptel-make-tool
    :name "my_read_file"
-   :function (lambda (rel-filepath &optional max-chars)
+   :function (lambda (rel-filepath &optional start-line end-line)
                (let* ((project-root (projectile-project-root))
                       (path (expand-file-name rel-filepath project-root)))
-                 (if (file-readable-p path)
+		 (if (file-readable-p path)
                      (with-temp-buffer
                        (insert-file-contents path)
-                       (if max-chars
-                           (buffer-substring-no-properties
-                            (point-min)
-                            (min (point-max) (+ (point-min) max-chars)))
-                         (buffer-string)))
+                       (let* ((total-lines (count-lines (point-min) (point-max)))
+                              (beg (if start-line
+                                       (progn (goto-char (point-min))
+                                              (forward-line (1- start-line))
+                                              (point))
+                                     (point-min)))
+                              (end (if end-line
+                                       (progn (goto-char (point-min))
+                                              (forward-line end-line)
+                                              (point))
+                                     (point-max))))
+			 (buffer-substring-no-properties beg end)))
                    (format "Error: Cannot read file %s" rel-filepath))))
-   :description "Read the contents of a text file (relative to project root)"
-   :args (list '(:name "rel-filepath"
-                       :type string
-                       :description "Path to the file relative to project root (e.g., 'README.md' or 'src/main.py')")
-               '(:name "max-chars"
-                       :type integer
-                       :description "Optional maximum number of characters to read"
+   :args (list '(:name "rel-filepath" :type string
+                       :description "Path to the file relative to project root")
+               '(:name "start-line" :type integer
+                       :description "First line to read (1-indexed, inclusive)"
+                       :optional t)
+               '(:name "end-line" :type integer
+                       :description "Last line to read (1-indexed, inclusive)"
                        :optional t))
+   :description "Read the contents of a text file (relative to project root)"
    :category "file-read")
 
   (gptel-make-tool
