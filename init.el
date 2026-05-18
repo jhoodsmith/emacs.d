@@ -1,6 +1,6 @@
 ;;; init.el -- My Emacs configuration  -*- lexical-binding: t -*-
 
-;; Copyright (C) 2025 James Hood-Smith
+;; Copyright (C) 2026 James Hood-Smith
 ;; Author: James Hood-Smith <james@hood-smith.co.uk>
 ;; URL: https://github.com/jhoodsmith/emacs.d
 
@@ -289,7 +289,7 @@
       org-src-fontify-natively t
       org-babel-python-command "python3"
       org-agenda-files (directory-files-recursively "~/org" "\\.org$")
-      org-capture-templates '(("n" "Note" entry (file "~/org/learnings.org")
+      org-capture-templates '(("n" "Note" entry (file "~/org/learnings/learnings.org")
                                "* %?%^g\nEntered on %U\n  %i\n")))
 (use-package org-modern
   :hook
@@ -738,9 +738,10 @@ Arguments:
                       :env (:FASTMCP_LOG_LEVEL "ERROR" :AWS_DOCUMENTATION_PARTITION "aws"))
 		     ("gocardless" .
 		      (:url "https://mcp.gocardless.com"))
-                     ("filesystem"
-                      :command "mcp-filesystem-server"
-	              :args ("/Users/james.hood-smith/work" "/Users/james.hood-smith/scratch")))))
+		     ("jupyter-mcp-server"
+		      :command "uvx"
+		      :args ("jupyter-mcp-server@latest")
+		      :env (:JUPYTER_URL "http://localhost:8888" :JUPYTER_TOKEN "argus-dev-token" :ALLOW_IMG_OUTPUT "true")))))
 
 (use-package gptel
   :load-path "/Users/james.hood-smith/work/gptel"
