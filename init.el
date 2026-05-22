@@ -770,12 +770,6 @@ Arguments:
     (gptel-make-gemini "Gemini"
       :key (auth-source-pick-first-password :host "generativelanguage.googleapis.com")))
 
-  (gptel-make-preset 'about-me
-    :description "Include init.el and learnings.org as context"
-    :context '(:eval (list (expand-file-name "~/.emacs.d/init.el")
-				     (expand-file-name "~/work/cv/cv.tex")
-				     (expand-file-name "~/org/learnings/learnings.org"))))
-
   (gptel-make-preset 'gemini-with-search
     :description "A preset for Gemini with web search"
     :backend "Gemini"
@@ -804,6 +798,7 @@ Arguments:
     :description "A preset for Bedrock with Claude 4.6 and web search"
     :backend "Bedrock"
     :model 'eu-claude-sonnet-4.6-profile
+    :context '()
     :system "You are a helpful assistant working within Emacs. When presenting results from web search always give me URL so I can cross check. I live near London, England."
     :tools '("my_web_search" "my_fetch_webpage"))
 
