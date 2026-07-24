@@ -20,6 +20,13 @@
            emacs-version
            minver)))
 
+;; Start server
+(use-package server
+  :ensure nil
+  :config
+  (unless (server-running-p)
+    (server-start)))
+
 ;; Load path
 (add-to-list 'load-path (expand-file-name "lisp" user-emacs-directory))
 (setq elisp-flymake-byte-compile-load-path load-path)
@@ -736,8 +743,16 @@ Arguments:
                       :command "uvx"
                       :args ("awslabs.aws-documentation-mcp-server@latest")
                       :env (:FASTMCP_LOG_LEVEL "ERROR" :AWS_DOCUMENTATION_PARTITION "aws"))
+		     ("mcp-atlassian"
+                      :command "uvx"
+                      :args ("mcp-atlassian")
+                      :env (:JIRA_URL ,(concat "https://" (plist-get (car (auth-source-search :host "smartpension.atlassian.net")) :host))
+			    :JIRA_USERNAME ,(plist-get (car (auth-source-search :host "smartpension.atlassian.net")) :user)
+			    :JIRA_API_TOKEN ,(auth-source-pick-first-password :host "smartpension.atlassian.net")))
 		     ("gocardless" .
 		      (:url "https://mcp.gocardless.com"))
+		     ("agent-toolkit-for-aws" . (:url "http://localhost:8765/mcp"))
+		     ("ruby-api-eval" . (:url "http://localhost:3000/mcp"))
 		     ("jupyter-mcp-server"
 		      :command "uvx"
 		      :args ("jupyter-mcp-server@latest")
@@ -755,15 +770,15 @@ Arguments:
   :config
   (require 'gptel-integrations)
   (require 'gptel-bedrock)
-  (push '(eu-claude-sonnet-4.5-profile . "eu.anthropic.claude-sonnet-4-5-20250929-v1:0") gptel-bedrock--model-ids)
   (push '(eu-claude-haiku-4.5-profile . "eu.anthropic.claude-haiku-4-5-20251001-v1:0") gptel-bedrock--model-ids)
-  (push '(eu-claude-opus-4.6-profile . "eu.anthropic.claude-opus-4-6-v1") gptel-bedrock--model-ids)
   (push '(eu-claude-sonnet-4.6-profile . "eu.anthropic.claude-sonnet-4-6") gptel-bedrock--model-ids)
+  (push '(eu-claude-sonnet-5-profile . "eu.anthropic.claude-sonnet-5") gptel-bedrock--model-ids)
+  (push '(eu-claude-opus-4.8 . "eu.anthropic.claude-opus-4-8") gptel-bedrock--model-ids)
 
   (defvar gptel-backend-bedrock
     (gptel-make-bedrock "Bedrock"
       :stream t
-      :models '(eu-claude-haiku-4.5-profile eu-claude-sonnet-4.5-profile eu-claude-opus-4.6-profile eu-claude-sonnet-4.6-profile)
+      :models '(eu-claude-haiku-4.5-profile eu-claude-sonnet-4.6-profile eu-claude-sonnet-5-profile eu-claude-opus-4.8)
       :region "eu-west-1"))
 
   (defvar gptel-backend-gemini
@@ -819,6 +834,49 @@ Arguments:
         ;; gptel-model 'gemini-2.5-flash
         gptel-backend gptel-backend-gh)
 
+  (let ((db-config (expand-file-name "db-connections.el" user-emacs-directory)))
+    (when (file-exists-p db-config)
+      (load db-config)))
+
+  (gptel-make-tool
+   :name "my_query_database"
+   :confirm t
+   :function (lambda (db-name query)
+               (let* ((db (cl-find db-name my/gptel-databases
+                                   :key (lambda (d) (plist-get d :name))
+                                   :test #'string=))
+                      (_ (unless db (error "Unknown database: %s" db-name)))
+                      (engine (plist-get db :engine))
+                      (host (plist-get db :host))
+                      (port (plist-get db :port))
+                      (database (plist-get db :database))
+                      (user (plist-get db :user))
+                      (password (auth-source-pick-first-password
+				 :host (plist-get db :auth-host)))
+                      (command
+                       (pcase engine
+			 ('mysql
+                          (format "mysql -h %s -P %d -u %s -p%s %s -e %s --batch --silent"
+                                  host port user password database
+                                  (shell-quote-argument query)))
+			 ('postgresql
+                          (format "PGPASSWORD=%s psql -h %s -p %d -U %s -d %s -c %s --no-psqlrc -t -A"
+                                  password host port user database
+                                  (shell-quote-argument query)))
+			 (_ (error "Unknown engine: %s" engine)))))
+		 (with-temp-buffer
+                   (let ((exit-code (call-process-shell-command command nil t nil)))
+                     (format "Database: %s\nQuery: %s\nExit code: %d\nOutput:\n%s"
+                             db-name query exit-code (buffer-string))))))
+   :description "Run a SQL query against a configured database. Only read-only queries should be used."
+   :args (list '(:name "db-name"
+                       :type string
+                       :description "Name of the database connection (e.g. 'prod-mysql', 'staging-pg')")
+               '(:name "query"
+                       :type string
+                       :description "The SQL query to execute"))
+   :category "database")
+
   (gptel-make-tool
    :name "my_run_command"
    :confirm nil
@@ -829,10 +887,13 @@ Arguments:
                       (command-env-map '(("pytest" . "uv run")
                                          ("ruff" . "uv run")
                                          ("mypy" . "uv run")
+					 ("python" . "uv run")
                                          ("rspec" . "bundle exec")
+					 ("ruby" . "bundle exec")
                                          ("rubocop" . "bundle exec")
 					 ("go" . "")
-					 ("npm" . "")))
+					 ("npm" . "")
+					 ("node" . "")))
                       (cmd-name (car (split-string command)))
                       (cmd-entry (assoc cmd-name command-env-map)))
                  (if cmd-entry
@@ -856,14 +917,14 @@ Arguments:
    :description "Run whitelisted development commands from the project root. Python commands run with uv run, Ruby commands with bundle exec."
    :args (list '(:name "command"
                        :type string
-                       :description "The command to run. Available commands: pytest, ruff, mypy (Python); rspec, rubocop (Ruby); go (golang); npm (node). Arguments can be added after the command."))
+                       :description "The command to run. Available commands: python, pytest, ruff, mypy (Python); rspec, rubocop, ruby (Ruby); go (golang); npm (nodeJS), node (NodeJS). Arguments can be added after the command."))
    :category "development")
 
   ;; gptel tool for getting current time
   (gptel-make-tool
    :name "current_time"
    :function (lambda () (format-time-string "%Y-%m-%d %H:%M:%S"))
-   :description "Returns current time in the format %Y-%m-%d %H:%M:%S"
+   :description "Returns current time in the format %Y-%m-%d %H:%M:%S. Always call this tool first when the current date or time is relevant to the query, including before any web searches about current events, recent information, or time-sensitive topics."
    :category "general")
 
   ;; gptel tool for getting historical weather data
@@ -960,6 +1021,52 @@ Arguments:
                        :description "Whether search should be case-sensitive (default: false)"
                        :optional t))
    :category "file-read")
+
+  (gptel-make-tool
+   :name "my_find_replace"
+   :confirm t
+   :function (lambda (pattern replacement &optional file-pattern)
+               (let* ((default-directory (projectile-project-root))
+                      (files (if file-pattern
+				 (shell-command-to-string
+                                  (format "rg -l --glob '%s' %s"
+                                          file-pattern
+                                          (shell-quote-argument pattern)))
+                               (shell-command-to-string
+				(format "rg -l %s"
+					(shell-quote-argument pattern)))))
+                      (file-list (seq-filter #'identity
+                                             (split-string files "\n" t)))
+                      (results (mapcar
+				(lambda (file)
+                                  (let ((exit-code
+					 (call-process-shell-command
+                                          (format "sd %s %s %s"
+                                                  (shell-quote-argument pattern)
+                                                  (shell-quote-argument replacement)
+                                                  (shell-quote-argument file))
+                                          nil nil nil)))
+                                    (cons file exit-code)))
+				file-list)))
+		 (if (null results)
+                     (format "No files found matching pattern: %s" pattern)
+                   (mapconcat
+                    (lambda (r)
+                      (format "%s: %s" (car r)
+                              (if (zerop (cdr r)) "OK" (format "error (exit %d)" (cdr r)))))
+                    results "\n"))))
+   :description "Find and replace text across project files using ripgrep (to find) and sd (to replace). sd uses regex by default."
+   :args (list '(:name "pattern"
+                       :type string
+                       :description "The regex pattern to search for")
+               '(:name "replacement"
+                       :type string
+                       :description "The replacement string. Use $1, $2 etc. for capture groups.")
+               '(:name "file-pattern"
+                       :type string
+                       :description "Optional glob pattern to restrict which files are modified (e.g., '*.py', '*.ts')"
+                       :optional t))
+   :category "file-write")
 
 
   (gptel-make-tool
@@ -1123,6 +1230,67 @@ Arguments:
                        :description "Number of results (default 5)"
                        :optional t))
    :category "web")
+
+  (gptel-make-tool
+   :name "git_add"
+   :function (lambda (pathspec)
+               (let ((default-directory (projectile-project-root)))
+		 (shell-command-to-string
+                  (format "git add %s" (shell-quote-argument pathspec)))))
+   :description "Stage files for commit"
+   :args (list '(:name "pathspec"
+                       :type string
+                       :description "File path or pattern to stage (e.g., 'src/foo.py', '.'  for all)"))
+   :category "git")
+
+  (gptel-make-tool
+   :name "git_commit"
+   :function (lambda (message)
+               (let ((default-directory (projectile-project-root)))
+		 (shell-command-to-string
+                  (format "git commit -m %s" (shell-quote-argument message)))))
+   :description "Create a git commit from staged changes"
+   :args (list '(:name "message"
+                       :type string
+                       :description "Commit message"))
+   :category "git")
+
+  (gptel-make-tool
+   :name "git_push"
+   :function (lambda (&optional remote branch)
+               (let ((default-directory (projectile-project-root)))
+		 (shell-command-to-string
+                  (format "git push %s %s"
+                          (or remote "origin")
+                          (or branch "")))))
+   :description "Push commits to a remote repository"
+   :args (list '(:name "remote"
+                       :type string
+                       :description "Remote name (default: origin)"
+                       :optional t)
+               '(:name "branch"
+                       :type string
+                       :description "Branch to push (default: current branch)"
+                       :optional t))
+   :category "git")
+
+  (gptel-make-tool
+   :name "git_checkout"
+   :function (lambda (branch &optional create)
+               (let ((default-directory (projectile-project-root)))
+		 (shell-command-to-string
+                  (if create
+                      (format "git checkout -b %s" (shell-quote-argument branch))
+                    (format "git checkout %s" (shell-quote-argument branch))))))
+   :description "Switch to a branch, or create and switch to a new one"
+   :args (list '(:name "branch"
+                       :type string
+                       :description "Branch name to switch to or create")
+               '(:name "create"
+                       :type boolean
+                       :description "Create the branch if it doesn't exist"
+                       :optional t))
+   :category "git")
 
   ;; Basic status and info
   (gptel-make-tool
@@ -1391,7 +1559,35 @@ Arguments:
                '(:name "dest-rel-path"
                        :type string
                        :description "Path for the destination file relative to project root"))
-   :category "file-write"))
+   :category "file-write")
+
+  (gptel-make-tool
+   :name "my_eval_elisp"
+   :confirm t
+   :function (lambda (expression &optional buffer-name)
+               (condition-case err
+                   (let* ((target-buffer (if buffer-name
+                                             (get-buffer buffer-name)
+                                           (current-buffer)))
+                          (result (with-current-buffer target-buffer
+                                    (eval (read expression) lexical-binding)))
+                          (output (with-output-to-string
+                                    (with-current-buffer target-buffer
+                                      (eval (read expression) lexical-binding)))))
+                     (concat (format "Result: %S\nType: %s"
+                                     result (type-of result))
+                             (unless (string-empty-p output)
+                               (format "\nOutput: %s" output))))
+		 (error (format "Error: %s" (error-message-string err)))))
+   :description "Evaluate an Emacs Lisp expression and return the result, its type, and any printed output. Optionally evaluate in the context of a specific buffer."
+   :args (list '(:name "expression"
+                       :type string
+                       :description "The Emacs Lisp expression to evaluate")
+               '(:name "buffer-name"
+                       :type string
+                       :description "Optional buffer name to evaluate the expression in"
+                       :optional t))
+   :category "emacs"))
 
 (defun my/gptel-aws-sso-login (profile)
   "Login to AWS SSO and set PROFILE for gptel-bedrock."
