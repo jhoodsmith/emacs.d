@@ -293,6 +293,7 @@
       org-startup-with-inline-images t
       org-src-window-setup 'other-window
       org-tags-column -88
+      org-hide-emphasis-markers t
       org-src-fontify-natively t
       org-babel-python-command "python3"
       org-agenda-files (directory-files-recursively "~/org" "\\.org$")
@@ -754,8 +755,8 @@ Arguments:
 		     ("agent-toolkit-for-aws" . (:url "http://localhost:8765/mcp"))
 		     ("ruby-api-eval" . (:url "http://localhost:3000/mcp"))
 		     ("jupyter-mcp-server"
-		      :command "uvx"
-		      :args ("jupyter-mcp-server@latest")
+		      :command "uv"
+		      :args ("run" "jupyter-mcp-server")
 		      :env (:JUPYTER_URL "http://localhost:8888" :JUPYTER_TOKEN "argus-dev-token" :ALLOW_IMG_OUTPUT "true")))))
 
 (use-package gptel
@@ -804,7 +805,8 @@ Arguments:
   (gptel-make-preset 'claude-with-search
     :description "A preset for Claude with web search"
     :backend "Claude"
-    :model 'claude-sonnet-4-6
+    :model 'claude-sonnet-5
+    :context '("/Users/james.hood-smith/work/cv/cv.tex")
     :system "You are a helpful assistant working within Emacs. When presenting results from web search always give me URL so I can cross check."
     :request-params '(:tools[(:type "web_search_20260209" :name "web_search" :allowed_callers ["direct"])
 			     (:type "web_fetch_20260209" :name "web_fetch"  :allowed_callers ["direct"])]))
@@ -813,7 +815,7 @@ Arguments:
     :description "A preset for Bedrock with Claude 4.6 and web search"
     :backend "Bedrock"
     :model 'eu-claude-sonnet-4.6-profile
-    :context '()
+    :context '("/Users/james.hood-smith/work/cv/cv.tex")
     :system "You are a helpful assistant working within Emacs. When presenting results from web search always give me URL so I can cross check. I live near London, England."
     :tools '("my_web_search" "my_fetch_webpage"))
 
@@ -893,7 +895,8 @@ Arguments:
                                          ("rubocop" . "bundle exec")
 					 ("go" . "")
 					 ("npm" . "")
-					 ("node" . "")))
+					 ("node" . "")
+					 ("helm" . "")))
                       (cmd-name (car (split-string command)))
                       (cmd-entry (assoc cmd-name command-env-map)))
                  (if cmd-entry
@@ -917,7 +920,7 @@ Arguments:
    :description "Run whitelisted development commands from the project root. Python commands run with uv run, Ruby commands with bundle exec."
    :args (list '(:name "command"
                        :type string
-                       :description "The command to run. Available commands: python, pytest, ruff, mypy (Python); rspec, rubocop, ruby (Ruby); go (golang); npm (nodeJS), node (NodeJS). Arguments can be added after the command."))
+                       :description "The command to run. Available commands: python, pytest, ruff, mypy (Python); rspec, rubocop, ruby (Ruby); go (golang); npm (nodeJS), node (NodeJS); helm (Kubernetes). Arguments can be added after the command."))
    :category "development")
 
   ;; gptel tool for getting current time
