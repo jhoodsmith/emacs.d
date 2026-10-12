@@ -45,7 +45,7 @@
 
 ;; Personal configuration
 (setq user-full-name "James Hood-Smith"
-      user-mail-address "james@hood-smith.me.uk"
+      user-mail-address "james.hood-smith@smartpension.co.uk"
       ispell-dictionary "british")
 
 ;; Some basic preferences
@@ -80,7 +80,7 @@
   :config
   (setq exec-path-from-shell-shell-name "/bin/zsh")
   (setq exec-path-from-shell-variables
-        (append exec-path-from-shell-variables '("NODE_EXTRA_CA_CERTS" "DIGITALOCEAN_ACCESS_TOKEN")))
+        (append exec-path-from-shell-variables '("NODE_EXTRA_CA_CERTS" "DIGITALOCEAN_ACCESS_TOKEN" "AWS_CA_BUNDLE")))
   (exec-path-from-shell-initialize))
 
 ;; Dictionary
@@ -754,6 +754,12 @@ Arguments:
 		      (:url "https://mcp.gocardless.com"))
 		     ("agent-toolkit-for-aws" . (:url "http://localhost:8765/mcp"))
 		     ("ruby-api-eval" . (:url "http://localhost:3000/mcp"))
+		     ("google-workspace"
+		      :command "uvx"
+		      :args ("workspace-mcp" "--tool-tier" "core")
+		      :env (:GOOGLE_OAUTH_CLIENT_SECRET ,(auth-source-pick-first-password :host "oauth2.googleapis.com")
+			    :GOOGLE_OAUTH_CLIENT_ID ,(plist-get (car (auth-source-search :host "oauth2.googleapis.com")) :host) 
+			    :OAUTHLIB_INSECURE_TRANSPORT "1"))
 		     ("jupyter-mcp-server"
 		      :command "uv"
 		      :args ("run" "jupyter-mcp-server")
@@ -771,16 +777,15 @@ Arguments:
   :config
   (require 'gptel-integrations)
   (require 'gptel-bedrock)
-  (push '(eu-claude-haiku-4.5-profile . "eu.anthropic.claude-haiku-4-5-20251001-v1:0") gptel-bedrock--model-ids)
+  (push '(eu-claude-haiku-5.5-profile . "eu.anthropic.claude-haiku-5-5") gptel-bedrock--model-ids)
   (push '(eu-claude-sonnet-4.6-profile . "eu.anthropic.claude-sonnet-4-6") gptel-bedrock--model-ids)
-  (push '(eu-claude-sonnet-5-profile . "eu.anthropic.claude-sonnet-5") gptel-bedrock--model-ids)
-  (push '(eu-claude-opus-4.8 . "eu.anthropic.claude-opus-4-8") gptel-bedrock--model-ids)
+  (push '(eu-claude-sonnet-5.5-profile . "eu.anthropic.claude-sonnet-5-5") gptel-bedrock--model-ids)
 
   (defvar gptel-backend-bedrock
     (gptel-make-bedrock "Bedrock"
       :stream t
-      :models '(eu-claude-haiku-4.5-profile eu-claude-sonnet-4.6-profile eu-claude-sonnet-5-profile eu-claude-opus-4.8)
-      :region "eu-west-1"))
+      :models '(eu-claude-haiku-5.5-profile eu-claude-sonnet-4.6-profile eu-claude-sonnet-5.5-profile)
+      :region "eu-west-2"))
 
   (defvar gptel-backend-gemini
     (gptel-make-gemini "Gemini"
@@ -1025,39 +1030,39 @@ Arguments:
                        :optional t))
    :category "file-read")
 
+  (defun my/find-and-replace (pattern replacement &optional file-pattern)
+    (let* ((default-directory (projectile-project-root))
+           (files (if file-pattern
+                      (shell-command-to-string
+                       (format "rg -l --glob '%s' %s"
+                               file-pattern
+                               (shell-quote-argument pattern)))
+                    (shell-command-to-string
+                     (format "rg -l %s"
+                             (shell-quote-argument pattern)))))
+           (file-list (seq-filter #'identity
+                                  (split-string files "\n" t)))
+           (results (mapcar
+                     (lambda (file)
+                       (cons file
+                             (call-process-shell-command
+                              (format "sd %s %s %s"
+                                      (shell-quote-argument pattern)
+                                      (shell-quote-argument replacement)
+                                      (shell-quote-argument file)))))
+                     file-list)))
+      (if (null results)
+          (format "No files found matching pattern: %s" pattern)
+	(mapconcat
+	 (lambda (r)
+           (format "%s: %s" (car r)
+                   (if (zerop (cdr r)) "OK" (format "error (exit %d)" (cdr r)))))
+	 results "\n"))))
+  
   (gptel-make-tool
    :name "my_find_replace"
-   :confirm t
-   :function (lambda (pattern replacement &optional file-pattern)
-               (let* ((default-directory (projectile-project-root))
-                      (files (if file-pattern
-				 (shell-command-to-string
-                                  (format "rg -l --glob '%s' %s"
-                                          file-pattern
-                                          (shell-quote-argument pattern)))
-                               (shell-command-to-string
-				(format "rg -l %s"
-					(shell-quote-argument pattern)))))
-                      (file-list (seq-filter #'identity
-                                             (split-string files "\n" t)))
-                      (results (mapcar
-				(lambda (file)
-                                  (let ((exit-code
-					 (call-process-shell-command
-                                          (format "sd %s %s %s"
-                                                  (shell-quote-argument pattern)
-                                                  (shell-quote-argument replacement)
-                                                  (shell-quote-argument file))
-                                          nil nil nil)))
-                                    (cons file exit-code)))
-				file-list)))
-		 (if (null results)
-                     (format "No files found matching pattern: %s" pattern)
-                   (mapconcat
-                    (lambda (r)
-                      (format "%s: %s" (car r)
-                              (if (zerop (cdr r)) "OK" (format "error (exit %d)" (cdr r)))))
-                    results "\n"))))
+   :confirm nil
+   :function #'my/find-and-replace
    :description "Find and replace text across project files using ripgrep (to find) and sd (to replace). sd uses regex by default."
    :args (list '(:name "pattern"
                        :type string
