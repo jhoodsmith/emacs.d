@@ -8,3 +8,5 @@
 !lisp/*
 !lsp-config/
 !lsp-config/*
+!early-init.el
+!local.el.example

@@ -1,0 +1,23 @@
+;;; local.el.example --- Template for machine-specific settings  -*- lexical-binding: t -*-
+
+;; Copy to local.el (which is gitignored) and fill in.  Every setting is
+;; optional; the related feature is skipped when its variable is nil.
+
+(setq user-mail-address "you@example.com")
+
+;; Extra CA bundles for TLS (e.g. a corporate proxy root certificate).
+(setq my/extra-trustfiles '("/path/to/root-ca.pem"))
+
+;; Local checkout of gptel, used in preference to the MELPA version.
+(setq my/gptel-load-path "/path/to/gptel")
+
+;; File added as context for the Claude and Bedrock gptel presets.
+(setq my/gptel-cv-file "/path/to/file.tex")
+
+;; Atlassian site used by the mcp-atlassian server (needs an auth-source entry).
+(setq my/atlassian-host "example.atlassian.net")
+
+;; Token for the local Jupyter MCP server.
+(setq my/jupyter-token "changeme")
+
+;;; local.el.example ends here
